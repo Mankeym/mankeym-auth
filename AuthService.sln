@@ -1,0 +1,43 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AuthService.Api", "AuthService.Api\AuthService.Api.csproj", "{F4972C50-C1C9-491D-9526-8F550B3ACA9C}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{B1AF896F-AD4E-4778-8903-94BBBA9DB40A}"
+	ProjectSection(SolutionItems) = preProject
+		docker-compose.yaml = docker-compose.yaml
+	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AuthService.UnitTests", "AuthService.UnitTests\AuthService.UnitTests.csproj", "{62EF5ED2-477E-4B4D-9A42-C7E8258D279D}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AuthService.IntegrationTests", "AuthService.IntegrationTests\AuthService.IntegrationTests.csproj", "{2DB41FF0-7E53-4D4E-BB54-8D057C678457}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AuthService.ArchitectureTests", "AuthService.ArchitectureTests\AuthService.ArchitectureTests.csproj", "{7ECF9C17-DBB1-4B85-BD8E-88D003ABDF61}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docs", "docs", "{7C022127-34E4-4C3E-892E-0BBE37F61A25}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "adr", "adr", "{694AC5D1-9249-4014-901D-55B0236CDEEC}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{F4972C50-C1C9-491D-9526-8F550B3ACA9C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F4972C50-C1C9-491D-9526-8F550B3ACA9C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F4972C50-C1C9-491D-9526-8F550B3ACA9C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F4972C50-C1C9-491D-9526-8F550B3ACA9C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{62EF5ED2-477E-4B4D-9A42-C7E8258D279D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{62EF5ED2-477E-4B4D-9A42-C7E8258D279D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{62EF5ED2-477E-4B4D-9A42-C7E8258D279D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{62EF5ED2-477E-4B4D-9A42-C7E8258D279D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2DB41FF0-7E53-4D4E-BB54-8D057C678457}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2DB41FF0-7E53-4D4E-BB54-8D057C678457}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2DB41FF0-7E53-4D4E-BB54-8D057C678457}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2DB41FF0-7E53-4D4E-BB54-8D057C678457}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7ECF9C17-DBB1-4B85-BD8E-88D003ABDF61}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7ECF9C17-DBB1-4B85-BD8E-88D003ABDF61}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7ECF9C17-DBB1-4B85-BD8E-88D003ABDF61}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7ECF9C17-DBB1-4B85-BD8E-88D003ABDF61}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal
