@@ -1,9 +1,11 @@
-﻿namespace AuthService.Api.Infrastructure.Tokens;
+﻿using AuthService.Api.Infrastructure.Persistence.Entities;
+
+namespace AuthService.Api.Infrastructure.Tokens;
 
 using System;
 using System.Collections.Generic;
 
-internal interface IJwtProvider
+public interface IJwtProvider
 {
-    string GenerateAccessToken(Guid userId, IEnumerable<string> roles);
+    Task<string> GenerateAccessToken(Guid userId, string email, IEnumerable<string> roles);
 }

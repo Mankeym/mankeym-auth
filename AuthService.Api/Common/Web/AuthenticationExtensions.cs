@@ -1,9 +1,12 @@
-﻿namespace AuthService.Api.Common.Web;
+﻿using System.Security.Cryptography;
+using AuthService.Api.Common.Options;
+
+namespace AuthService.Api.Common.Web;
 
 using System;
 using System.Text;
 using System.Threading.Tasks;
-using AuthService.Api.Infrastructure.Tokens;
+using Infrastructure.Tokens;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -16,12 +19,12 @@ public static class AuthenticationExtensions
         this IServiceCollection services,
         IConfiguration configuration)
     {
-        var jwtSettings = configuration.GetSection("JwtSettings");
-        var secretKey = jwtSettings["SecretKey"]
-            ?? throw new InvalidOperationException("JwtSettings:SecretKey is missing");
-        var issuer = jwtSettings["Issuer"] ?? "default-issuer";
-        var audience = jwtSettings["Audience"] ?? "default-audience";
-        var expiryMinutes = jwtSettings.GetValue<double?>("ExpiryMinutes") ?? 60.0;
+        services.AddOptions<JwtOptions>()
+            .BindConfiguration(JwtOptions.SectionName)
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
+        var jwtOptions = configuration.GetSection(JwtOptions.SectionName).Get<JwtOptions>()
+            ?? throw new InvalidOperationException($"Section {JwtOptions.SectionName} is missing from configuration");
 
         services.AddAuthentication(options =>
         {
@@ -30,15 +33,22 @@ public static class AuthenticationExtensions
         })
         .AddJwtBearer(options =>
         {
+            var rsa = RSA.Create();
+            rsa.ImportFromPem(jwtOptions.PublicKey);
+            var publicKey = new RsaSecurityKey(rsa);
+
             options.TokenValidationParameters = new TokenValidationParameters
             {
                 ValidateIssuer = true,
+                ValidIssuer = jwtOptions.Issuer,
                 ValidateAudience = true,
+                ValidAudience = jwtOptions.Audience,
                 ValidateLifetime = true,
+                ClockSkew = TimeSpan.Zero,
+
                 ValidateIssuerSigningKey = true,
-                ValidIssuer = issuer,
-                ValidAudience = audience,
-                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey))
+                // Используем ПУБЛИЧНЫЙ ключ для проверки подписи
+                IssuerSigningKey = publicKey
             };
 
             options.Events = new JwtBearerEvents
@@ -46,7 +56,8 @@ public static class AuthenticationExtensions
                 OnAuthenticationFailed = context =>
                 {
                     var logger = context.HttpContext.RequestServices
-                        .GetRequiredService<ILogger<Program>>();
+                        .GetRequiredService<ILogger<JwtBearerEvents>>();
+
                     logger.LogWarning(context.Exception, "JWT authentication failed");
                     return Task.CompletedTask;
                 },
