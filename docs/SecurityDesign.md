@@ -44,6 +44,7 @@ Any TTL change requires updating tests and release notes. Refresh tokens are rot
 
 - Store hashed IP and user-agent values only where they are needed for session/audit correlation.
 - In Production, configure `Audit:HashKey` through the platform secret store; audit IP values use HMAC-SHA256 and the service fails fast if this key is absent.
+- Forwarded `X-Forwarded-For` and `X-Forwarded-Proto` headers are accepted only from loopback by default. Production must explicitly configure the ingress address in `ForwardedHeaders:KnownProxies` (or its private CIDR in `ForwardedHeaders:KnownNetworks`); never trust all sources.
 - Do not store raw IP/user-agent, passwords, token values, OAuth codes, secrets or request bodies in audit metadata or logs.
 - Retain audit events 180 days; retain successful outbox messages 30 days; do not auto-delete failed outbox messages.
 

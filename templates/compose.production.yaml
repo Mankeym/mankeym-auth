@@ -10,6 +10,9 @@ services:
       JwtSettings__PrivateKey: ${JWT_PRIVATE_KEY}
       JwtSettings__PublicKey: ${JWT_PUBLIC_KEY}
       Audit__HashKey: ${AUDIT_HASH_KEY}
+      # Trust forwarded headers only from the IP of your ingress / reverse proxy.
+      # For a proxy subnet, use ForwardedHeaders__KnownNetworks__0 instead.
+      ForwardedHeaders__KnownProxies__0: ${REVERSE_PROXY_IP:?Set the reverse-proxy IP}
     ports: [] # expose through a reverse proxy / ingress, not directly
     secrets: [] # replace environment variables with platform secret references when available
 

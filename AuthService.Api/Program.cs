@@ -1,32 +1,21 @@
+using System.Net;
 using System.Reflection;
-using System.Security.Cryptography;
 using System.Runtime.CompilerServices;
+using System.Security.Cryptography;
 using System.Text.Json;
 using System.Threading.RateLimiting;
-using AuthService.Api.Common.Web;
 using AuthService.Api.Common.RateLimiting;
+using AuthService.Api.Common.Web;
 using AuthService.Api.Features.Audit;
 using AuthService.Api.Features.Auth.ConfirmEmail;
 using AuthService.Api.Features.Auth.ExternalCallback;
 using AuthService.Api.Features.Auth.ExternalChallenge;
 using AuthService.Api.Features.Auth.ExternalUnlink;
 using AuthService.Api.Features.Auth.ForgotPassword;
-using AuthService.Api.Features.Auth.Register;
-using AuthService.Api.Infrastructure.HealthChecks;
-using AuthService.Api.Infrastructure.Persistence;
-using AuthService.Api.Infrastructure.Persistence.Entities;
-using AuthService.Api.Infrastructure.Seed;
-using DotNetEnv;
-using FluentValidation;
-using FluentValidation.AspNetCore;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Diagnostics.HealthChecks;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Diagnostics.HealthChecks;
 using AuthService.Api.Features.Auth.Login;
 using AuthService.Api.Features.Auth.Logout;
 using AuthService.Api.Features.Auth.Refresh;
+using AuthService.Api.Features.Auth.Register;
 using AuthService.Api.Features.Auth.RequestEmailConfirmation;
 using AuthService.Api.Features.Auth.ResetPassword;
 using AuthService.Api.Features.Roles.GetAllRoles;
@@ -39,19 +28,31 @@ using AuthService.Api.Features.Users.RemoveRole;
 using AuthService.Api.Infrastructure.Authorization;
 using AuthService.Api.Infrastructure.BackgroundJobs;
 using AuthService.Api.Infrastructure.Email;
-using AuthService.Api.Infrastructure.Outbox;
-using AuthService.Api.Infrastructure.Security;
-using AuthService.Api.Infrastructure.RateLimiting;
-using AuthService.Api.Infrastructure.Tokens;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.HttpOverrides;
-using Microsoft.AspNetCore.Mvc;
-using Scalar.AspNetCore;
-using StackExchange.Redis;
-using OpenTelemetry.Trace;
-using OpenTelemetry.Metrics;
-using Serilog;
+using AuthService.Api.Infrastructure.HealthChecks;
 using AuthService.Api.Infrastructure.Observability;
+using AuthService.Api.Infrastructure.Outbox;
+using AuthService.Api.Infrastructure.Persistence;
+using AuthService.Api.Infrastructure.Persistence.Entities;
+using AuthService.Api.Infrastructure.RateLimiting;
+using AuthService.Api.Infrastructure.Security;
+using AuthService.Api.Infrastructure.Seed;
+using AuthService.Api.Infrastructure.Tokens;
+using DotNetEnv;
+using FluentValidation;
+using FluentValidation.AspNetCore;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
+using OpenTelemetry.Metrics;
+using OpenTelemetry.Trace;
+using Scalar.AspNetCore;
+using Serilog;
+using StackExchange.Redis;
 
 [assembly: InternalsVisibleTo("AuthService.IntegrationTests")]
 [assembly: InternalsVisibleTo("AuthService.UnitTests")]
@@ -199,9 +200,29 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
     options.ForwardedHeaders =
         ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    options.ForwardLimit = 1;
+    options.RequireHeaderSymmetry = true;
 
-    options.KnownNetworks.Clear();
-    options.KnownProxies.Clear();
+    var knownProxies = builder.Configuration
+        .GetSection("ForwardedHeaders:KnownProxies")
+        .Get<string[]>() ?? [];
+    foreach (var proxy in knownProxies)
+    {
+        if (!IPAddress.TryParse(proxy, out var address))
+        {
+            throw new InvalidOperationException($"ForwardedHeaders:KnownProxies contains invalid IP address '{proxy}'.");
+        }
+
+        options.KnownProxies.Add(address);
+    }
+
+    var knownNetworks = builder.Configuration
+        .GetSection("ForwardedHeaders:KnownNetworks")
+        .Get<string[]>() ?? [];
+    foreach (var network in knownNetworks)
+    {
+        options.KnownNetworks.Add(ParseKnownNetwork(network));
+    }
 });
 builder.Services.AddControllers();
 
@@ -275,10 +296,7 @@ builder.Services.AddRateLimiter(options =>
 
 var app = builder.Build();
 app.UseStatusCodePages();
-app.UseForwardedHeaders(new ForwardedHeadersOptions
-{
-    ForwardedHeaders = ForwardedHeaders.XForwardedProto | ForwardedHeaders.XForwardedFor
-});
+app.UseForwardedHeaders();
 
 if (!app.Environment.IsDevelopment())
 {
@@ -328,6 +346,28 @@ static Task WriteHealthCheckResponse(HttpContext context, HealthReport report)
     };
     context.Response.ContentType = "application/json";
     return context.Response.WriteAsync(JsonSerializer.Serialize(response));
+}
+
+static Microsoft.AspNetCore.HttpOverrides.IPNetwork ParseKnownNetwork(string value)
+{
+    var parts = value.Split('/', StringSplitOptions.TrimEntries);
+    if (parts.Length != 2
+        || !IPAddress.TryParse(parts[0], out var networkAddress)
+        || !int.TryParse(parts[1], out var prefixLength))
+    {
+        throw new InvalidOperationException(
+            $"ForwardedHeaders:KnownNetworks contains invalid CIDR '{value}'.");
+    }
+
+    try
+    {
+        return new Microsoft.AspNetCore.HttpOverrides.IPNetwork(networkAddress, prefixLength);
+    }
+    catch (ArgumentOutOfRangeException exception)
+    {
+        throw new InvalidOperationException(
+            $"ForwardedHeaders:KnownNetworks contains invalid CIDR '{value}'.", exception);
+    }
 }
 app.UseHttpsRedirection();
 app.UseMiddleware<CorrelationIdMiddleware>();
