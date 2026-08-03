@@ -2,6 +2,8 @@
 
 Release Please creates and maintains a release pull request from commits merged into `main`. Merging that pull request updates `CHANGELOG.md`, creates a SemVer tag, and publishes a GitHub Release.
 
+The workflow uses the `RELEASE_PLEASE_TOKEN` Actions secret rather than `GITHUB_TOKEN`, so the normal CI workflow runs on generated release pull requests.
+
 ## Versioning rules
 
 | Commit format | Version change | Example |
