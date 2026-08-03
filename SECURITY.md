@@ -2,7 +2,7 @@
 
 ## Supported version
 
-Security fixes are made on the current `main` branch of this production-oriented pet project. The repository demonstrates production practices, but it is not a supported production service.
+Security fixes target the current `main` branch.
 
 ## Reporting a vulnerability
 

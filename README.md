@@ -93,7 +93,7 @@ Copy `.env.example` to `.env` for local non-secret overrides. Never commit `.env
 | `Redis__Configuration` | Outside Compose | `localhost:6390,abortConnect=false` | Redis endpoint. |
 | `JwtSettings__PrivateKey` / `JwtSettings__PublicKey` | Production | `-----BEGIN ... KEY-----` | Store only in secret storage. Development generates ephemeral keys if absent. |
 | `Audit__HashKey` | Outside Development | `replace-with-32-or-more-random-bytes` | Required in Production for HMAC-hashed audit IPs. |
-| `Authentication__Google__ClientId` / `Authentication__Google__ClientSecret` | Optional | `demo-client-id` / `demo-secret` | Leave empty to disable Google OAuth. |
+| `Authentication__Google__ClientId` / `Authentication__Google__ClientSecret` | Optional | `example-client-id` / `example-secret` | Leave empty to disable Google OAuth. |
 | `REVERSE_PROXY_IP` | Production Compose | `10.0.0.10` | Trust forwarded headers only from this proxy; never use a public CIDR. |
 
 ### Migrations

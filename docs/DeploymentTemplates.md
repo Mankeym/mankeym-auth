@@ -1,6 +1,6 @@
 # Deployment templates
 
-These templates are deliberately inactive: this pet project has no selected cloud/VPS/Kubernetes target.
+These templates remain inactive until a cloud, VPS, or Kubernetes deployment target is selected.
 
 ## GitHub Environments
 

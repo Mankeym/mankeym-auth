@@ -12,7 +12,7 @@ Auth Service issues access tokens. Other services may need to validate those tok
 
 ## Decision
 
-Use **RS256** for the production demonstration and any multi-service deployment.
+Use **RS256** for production and any multi-service deployment.
 
 Auth Service keeps `JwtSettings:PrivateKey` only in User Secrets locally and in a secret store in deployed environments. Consumers receive only `JwtSettings:PublicKey`. Private keys must never be committed, emitted in logs, sent through API responses, or added to Docker image layers.
 
