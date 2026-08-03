@@ -15,6 +15,7 @@ using Microsoft.IdentityModel.Tokens;
 
 public static class AuthenticationExtensions
 {
+    private static readonly Action<ILogger, Exception?> LogJwtAuthenticationFailed = LoggerMessage.Define(LogLevel.Warning, new EventId(1), "JWT authentication failed");
     public static IServiceCollection AddJwtAuthentication(
         this IServiceCollection services,
         IConfiguration configuration)
@@ -59,7 +60,7 @@ public static class AuthenticationExtensions
                     var logger = context.HttpContext.RequestServices
                         .GetRequiredService<ILogger<JwtBearerEvents>>();
 
-                    logger.LogWarning(context.Exception, "JWT authentication failed");
+                    LogJwtAuthenticationFailed(logger, context.Exception);
                     return Task.CompletedTask;
                 },
             };

@@ -8,10 +8,15 @@ public class TokenCleanupBackgroundService(
     ILogger<TokenCleanupBackgroundService> logger) : BackgroundService
 {
     private readonly TimeSpan _checkInterval = TimeSpan.FromHours(24);
+    private static readonly Action<ILogger, Exception?> LogStarting = LoggerMessage.Define(LogLevel.Information, new EventId(1), "Token Cleanup Background Service is starting.");
+    private static readonly Action<ILogger, Exception?> LogFailed = LoggerMessage.Define(LogLevel.Error, new EventId(2), "An error occurred while cleaning up expired tokens.");
+    private static readonly Action<ILogger, Exception?> LogStopping = LoggerMessage.Define(LogLevel.Information, new EventId(3), "Token Cleanup Background Service is stopping.");
+    private static readonly Action<ILogger, DateTime, Exception?> LogRunning = LoggerMessage.Define<DateTime>(LogLevel.Information, new EventId(4), "Running token cleanup job at {Time}");
+    private static readonly Action<ILogger, int, int, Exception?> LogCompleted = LoggerMessage.Define<int, int>(LogLevel.Information, new EventId(5), "Token cleanup completed. Deleted {TokenCount} expired tokens and {SessionCount} old sessions.");
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        logger.LogInformation("Token Cleanup Background Service is starting.");
+        LogStarting(logger, null);
 
         while (!stoppingToken.IsCancellationRequested)
         {
@@ -21,14 +26,14 @@ public class TokenCleanupBackgroundService(
             }
             catch (Exception ex)
             {
-                logger.LogError(ex, "An error occurred while cleaning up expired tokens.");
+                LogFailed(logger, ex);
             }
 
             // Ждем перед следующим запуском
             await Task.Delay(_checkInterval, stoppingToken);
         }
 
-        logger.LogInformation("Token Cleanup Background Service is stopping.");
+        LogStopping(logger, null);
     }
 
     private async Task CleanupExpiredTokensAsync(CancellationToken cancellationToken)
@@ -40,7 +45,7 @@ public class TokenCleanupBackgroundService(
 
         var thresholdDate = now.AddDays(-7);
 
-        logger.LogInformation("Running token cleanup job at {Time}", now);
+        LogRunning(logger, now, null);
 
         // Используем ExecuteDeleteAsync для эффективного удаления на уровне БД
         var deletedTokensCount = await dbContext.RefreshTokens
@@ -54,10 +59,7 @@ public class TokenCleanupBackgroundService(
 
         if (deletedTokensCount > 0 || deletedSessionsCount > 0)
         {
-            logger.LogInformation(
-                "Token cleanup completed. Deleted {TokenCount} expired tokens and {SessionCount} old sessions.",
-                deletedTokensCount,
-                deletedSessionsCount);
+            LogCompleted(logger, deletedTokensCount, deletedSessionsCount, null);
         }
     }
 }

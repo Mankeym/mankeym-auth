@@ -10,6 +10,14 @@ namespace AuthService.Api.Infrastructure.Seed;
 
 public static class DbInitializer
 {
+    private static readonly Action<ILogger, string, string, Exception?> LogRoleCreateFailed = LoggerMessage.Define<string, string>(LogLevel.Error, new EventId(1), "Failed to create role {Role}: {Errors}");
+    private static readonly Action<ILogger, string, Exception?> LogRoleMissing = LoggerMessage.Define<string>(LogLevel.Error, new EventId(2), "Role {Role} was not found after creation.");
+    private static readonly Action<ILogger, Exception?> LogSeeded = LoggerMessage.Define(LogLevel.Information, new EventId(3), "Roles and permissions successfully seeded.");
+    private static readonly Action<ILogger, string, string, Exception?> LogAdminCreated = LoggerMessage.Define<string, string>(LogLevel.Information, new EventId(4), "Superuser '{Email}' created successfully with role '{Role}'.");
+    private static readonly Action<ILogger, string, Exception?> LogAdminCreateFailed = LoggerMessage.Define<string>(LogLevel.Error, new EventId(5), "Failed to create superuser: {Errors}");
+    private static readonly Action<ILogger, string, string, Exception?> LogAdminRoleRestored = LoggerMessage.Define<string, string>(LogLevel.Information, new EventId(6), "Role '{Role}' restored for existing superuser '{Email}'.");
+    private static readonly Action<ILogger, Exception?> LogAdminSkipped = LoggerMessage.Define(LogLevel.Warning, new EventId(7), "Admin credentials not found in configuration. Superuser creation skipped.");
+    private static readonly Action<ILogger, Exception?> LogSeedFailed = LoggerMessage.Define(LogLevel.Error, new EventId(8), "An error occurred while seeding the database.");
     public static async Task SeedRolesAndPermissionsAsync(IServiceProvider services)
     {
         var context = services.GetRequiredService<AppDbContext>();
@@ -52,13 +60,13 @@ public static class DbInitializer
                     var createResult = await roleManager.CreateAsync(role);
                     if (!createResult.Succeeded)
                     {
-                        logger.LogError("Failed to create role {Role}: {Errors}", roleName, string.Join(", ", createResult.Errors.Select(e => e.Description)));
+                        LogRoleCreateFailed(logger, roleName, string.Join(", ", createResult.Errors.Select(e => e.Description)), null);
                         continue;
                     }
                     role = await roleManager.FindByNameAsync(roleName);
                     if (role == null)
                     {
-                        logger.LogError("Role {Role} was not found after creation.", roleName);
+                        LogRoleMissing(logger, roleName, null);
                         continue;
                     }
                 }
@@ -94,7 +102,7 @@ public static class DbInitializer
                 }
             }
             await context.SaveChangesAsync();
-            logger.LogInformation("Roles and permissions successfully seeded.");
+            LogSeeded(logger, null);
 
             var adminEmail = configuration["ADMIN_EMAIL"];
             var adminPassword = configuration["ADMIN_PASSWORD"];
@@ -119,12 +127,11 @@ public static class DbInitializer
                     if (createAdminResult.Succeeded)
                     {
                         await userManager.AddToRoleAsync(adminUser, adminRole);
-                        logger.LogInformation("Superuser '{Email}' created successfully with role '{Role}'.", adminEmail, adminRole);
+                        LogAdminCreated(logger, adminEmail, adminRole, null);
                     }
                     else
                     {
-                        logger.LogError("Failed to create superuser: {Errors}",
-                            string.Join(", ", createAdminResult.Errors.Select(e => e.Description)));
+                        LogAdminCreateFailed(logger, string.Join(", ", createAdminResult.Errors.Select(e => e.Description)), null);
                     }
                 }
                 else
@@ -132,18 +139,18 @@ public static class DbInitializer
                     if (!await userManager.IsInRoleAsync(adminUser, adminRole))
                     {
                         await userManager.AddToRoleAsync(adminUser, adminRole);
-                        logger.LogInformation("Role '{Role}' restored for existing superuser '{Email}'.", adminRole, adminEmail);
+                        LogAdminRoleRestored(logger, adminRole, adminEmail, null);
                     }
                 }
             }
             else
             {
-                logger.LogWarning("Admin credentials not found in configuration. Superuser creation skipped.");
+                LogAdminSkipped(logger, null);
             }
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "An error occurred while seeding the database.");
+            LogSeedFailed(logger, ex);
         }
     }
 }

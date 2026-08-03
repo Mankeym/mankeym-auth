@@ -5,7 +5,6 @@ does not imply that all analyzer findings have been eliminated.
 
 | Priority | Rule | Plan |
 |---|---|---|
-| P1 | CA1848 | Convert the 19 existing background/seed/outbox logging calls to `LoggerMessage` delegates, then promote the rule to a build warning. |
 | P1 | CA1062 | Enable per application area after excluding generated migrations and framework callbacks; add guards only at meaningful public boundaries. |
 | P2 | CA1305, CA1307, CA1308, CA1310 | Audit culture-sensitive formatting and string comparisons; use invariant culture or an explicit comparison where behavior matters. |
 | P2 | CA2000 | Keep as a suggestion for JWT signing keys because IdentityModel caches signing providers; do not dispose a key while the cache can still use it. |

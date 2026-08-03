@@ -10,6 +10,7 @@ public sealed class RedisAuthRateLimiter(
     IConnectionMultiplexer connectionMultiplexer,
     ILogger<RedisAuthRateLimiter> logger) : IAuthRateLimiter
 {
+    private static readonly Action<ILogger, string, Exception?> LogUnavailable = LoggerMessage.Define<string>(LogLevel.Warning, new EventId(1), "Redis rate limiting is unavailable for policy {Policy}");
     private const string IncrementFixedWindowScript = """
         local count = redis.call('INCR', KEYS[1])
         if count == 1 then
@@ -60,7 +61,7 @@ public sealed class RedisAuthRateLimiter(
         {
             // Redis limits are an abuse-protection layer, not the source of security truth.
             // Keep the API available during a Redis outage and rely on alerting/health checks.
-            logger.LogWarning(exception, "Redis rate limiting is unavailable for policy {Policy}", policy.Name);
+            LogUnavailable(logger, policy.Name, exception);
             return new AuthRateLimitResult(true, TimeSpan.Zero);
         }
     }

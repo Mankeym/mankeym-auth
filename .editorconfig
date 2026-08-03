@@ -45,7 +45,7 @@ dotnet_diagnostic.CA2007.severity = none
 # IdentityModel caches signing providers; the RSA key must remain alive for the process lifetime.
 dotnet_diagnostic.CA2000.severity = suggestion
 dotnet_diagnostic.CA2227.severity = none
-dotnet_diagnostic.CA1848.severity = suggestion
+dotnet_diagnostic.CA1848.severity = warning
 
 # The API surface is intentionally public and is validated by ASP.NET Core,
 # FluentValidation, EF Core, or Identity. Keep these as IDE suggestions rather

@@ -13,6 +13,8 @@ public sealed class OutboxProcessor(
     private const int BatchSize = 20;
     private static readonly TimeSpan LeaseDuration = TimeSpan.FromMinutes(2);
     private static readonly TimeSpan PollInterval = TimeSpan.FromSeconds(5);
+    private static readonly Action<ILogger, Exception?> LogTickFailed = LoggerMessage.Define(LogLevel.Error, new EventId(1), "Outbox processing tick failed.");
+    private static readonly Action<ILogger, Guid, int, Exception?> LogDeliveryFailed = LoggerMessage.Define<Guid, int>(LogLevel.Warning, new EventId(2), "Outbox message {MessageId} delivery attempt {Attempt} failed.");
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -30,7 +32,7 @@ public sealed class OutboxProcessor(
             }
             catch (Exception ex)
             {
-                logger.LogError(ex, "Outbox processing tick failed.");
+                LogTickFailed(logger, ex);
             }
         }
     }
@@ -134,7 +136,7 @@ public sealed class OutboxProcessor(
                     : null;
                 message.LockId = null;
                 message.LockedUntilUtc = null;
-                logger.LogWarning(ex, "Outbox message {MessageId} delivery attempt {Attempt} failed.", message.Id, message.Attempts);
+                LogDeliveryFailed(logger, message.Id, message.Attempts, ex);
                 AuthTelemetry.OutboxDeliveryFailures.Add(1, new KeyValuePair<string, object?>("outbox.type", message.Type));
             }
         }

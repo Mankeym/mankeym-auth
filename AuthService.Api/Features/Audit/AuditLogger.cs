@@ -12,6 +12,7 @@ public class AuditLogger(
     IHostEnvironment environment) : IAuditLogger
 {
     private readonly byte[] _hashKey = GetHashKey(configuration, environment);
+    private static readonly Action<ILogger, string, string, Guid?, string, Exception?> LogAuditEvent = LoggerMessage.Define<string, string, Guid?, string>(LogLevel.Information, new EventId(1), "AuditEvent {EventType} {Outcome} for actor {ActorUserId}; correlation {CorrelationId}");
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles
@@ -46,9 +47,7 @@ public class AuditLogger(
             OccurredAtUtc = DateTime.UtcNow
         };
 
-        logger.LogInformation(
-            "AuditEvent {EventType} {Outcome} for actor {ActorUserId}; correlation {CorrelationId}",
-            eventType, outcome, actorUserId, correlationId);
+        LogAuditEvent(logger, eventType, outcome, actorUserId, correlationId, null);
 
         context.AuditEvents.Add(auditEvent);
     }
