@@ -10,6 +10,8 @@ public class OutboxMessage
     public DateTime OccurredAtUtc { get; set; }
     public DateTime? ProcessedAtUtc { get; set; }
     public DateTime? NextAttemptAtUtc { get; set; }
+    public DateTime? LockedUntilUtc { get; set; }
+    public Guid? LockId { get; set; }
     public int Attempts { get; set; }
     public string? Error { get; set; }
 }

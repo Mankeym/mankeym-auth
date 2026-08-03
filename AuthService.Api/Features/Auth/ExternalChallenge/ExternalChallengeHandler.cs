@@ -20,11 +20,20 @@ public class ExternalChallengeHandler(
     LinkGenerator linkGenerator,
     IAuditLogger auditLogger,
     AppDbContext dbContext,
-    IHttpContextAccessor httpContextAccessor) : IExternalChallengeHandler
+    IHttpContextAccessor httpContextAccessor,
+    Microsoft.AspNetCore.Authentication.IAuthenticationSchemeProvider schemes) : IExternalChallengeHandler
 {
     public async Task<IActionResult> Challenge(ExternalChallengeRequest request)
     {
         var (provider, returnUrl) = request;
+        if (await schemes.GetSchemeAsync(provider) is null)
+        {
+            return new ObjectResult(new { error = "External provider is not configured." })
+            {
+                StatusCode = StatusCodes.Status503ServiceUnavailable
+            };
+        }
+
         var httpContext = httpContextAccessor.HttpContext
                           ?? throw new InvalidOperationException("HttpContext is missing");
 

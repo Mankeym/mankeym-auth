@@ -21,6 +21,7 @@ public class ExternalChallengeHandlerTests
     private readonly Mock<LinkGenerator> _linkGeneratorMock;
     private readonly Mock<IHttpContextAccessor> _contextAccessorMock;
     private readonly Mock<IAuditLogger> _auditLoggerMock;
+    private readonly Mock<IAuthenticationSchemeProvider> _schemesMock;
     private readonly AppDbContext _dbContext;
     private readonly ExternalChallengeHandler _handler;
 
@@ -41,6 +42,10 @@ public class ExternalChallengeHandlerTests
 
         _linkGeneratorMock = new Mock<LinkGenerator>();
         _auditLoggerMock = new Mock<IAuditLogger>();
+        _schemesMock = new Mock<IAuthenticationSchemeProvider>();
+        _schemesMock
+            .Setup(x => x.GetSchemeAsync("Google"))
+            .ReturnsAsync(new AuthenticationScheme("Google", "Google", typeof(AuthenticationHandler<AuthenticationSchemeOptions>)));
         _dbContext = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>()
             .UseInMemoryDatabase(Guid.NewGuid().ToString())
             .Options);
@@ -54,7 +59,8 @@ public class ExternalChallengeHandlerTests
             _linkGeneratorMock.Object,
             _auditLoggerMock.Object,
             _dbContext,
-            _contextAccessorMock.Object
+            _contextAccessorMock.Object,
+            _schemesMock.Object
         );
     }
 

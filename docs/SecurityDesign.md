@@ -43,6 +43,7 @@ Any TTL change requires updating tests and release notes. Refresh tokens are rot
 ## Privacy policy
 
 - Store hashed IP and user-agent values only where they are needed for session/audit correlation.
+- In Production, configure `Audit:HashKey` through the platform secret store; audit IP values use HMAC-SHA256 and the service fails fast if this key is absent.
 - Do not store raw IP/user-agent, passwords, token values, OAuth codes, secrets or request bodies in audit metadata or logs.
 - Retain audit events 180 days; retain successful outbox messages 30 days; do not auto-delete failed outbox messages.
 
