@@ -4,7 +4,6 @@ using AuthService.Api.Infrastructure.Persistence;
 using FluentAssertions;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
@@ -20,13 +19,9 @@ public class SmokeTests : IClassFixture<WebApplicationFactory<Program>>
     {
         _factory = factory.WithWebHostBuilder(builder =>
         {
-            builder.ConfigureAppConfiguration((_, configuration) =>
-                configuration.AddInMemoryCollection(new Dictionary<string, string?>
-                {
-                    ["ConnectionStrings:DB_CONNECTION"] = "Host=localhost;Database=authservice_smoke;Username=postgres;Password=postgres",
-                    ["Redis:Configuration"] = "localhost:6379,abortConnect=false",
-                    ["Database:ApplyMigrations"] = "false"
-                }));
+            builder.UseSetting("ConnectionStrings:DB_CONNECTION", "Host=localhost;Database=authservice_smoke;Username=postgres;Password=postgres");
+            builder.UseSetting("Redis:Configuration", "localhost:6379,abortConnect=false");
+            builder.UseSetting("Database:ApplyMigrations", "false");
 
             builder.ConfigureServices(services =>
             {
