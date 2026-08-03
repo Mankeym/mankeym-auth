@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.0](https://github.com/Mankeym/mankeym-auth/compare/v0.2.0...v0.3.0) (2026-08-03)
+
+
+### ✨ Features
+
+* **release:** document workflow verification ([a3ed6b8](https://github.com/Mankeym/mankeym-auth/commit/a3ed6b81bbff1ad935cca3ac9a2414d340fc66a0))
+
 ## [0.2.0](https://github.com/Mankeym/mankeym-auth/compare/v0.1.0...v0.2.0) (2026-08-03)
 
 
