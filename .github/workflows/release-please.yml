@@ -15,6 +15,22 @@ jobs:
     steps:
       - name: Create or update release pull request
         uses: googleapis/release-please-action@v5
+        id: release
         with:
+          token: ${{ secrets.RELEASE_PLEASE_TOKEN }}
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
+      - name: Enable auto-merge for release pull request
+        if: ${{ steps.release.outputs.prs_created == 'true' }}
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_PLEASE_TOKEN }}
+          RELEASE_PRS: ${{ steps.release.outputs.prs }}
+        run: |
+          pr_number="$(echo "$RELEASE_PRS" | jq -r '.[0].number')"
+          auto_merge_enabled="$(gh pr view "$pr_number" --json autoMergeRequest --jq '.autoMergeRequest != null')"
+
+          if [ "$auto_merge_enabled" = "true" ]; then
+            exit 0
+          fi
+
+          gh pr merge "$pr_number" --auto --squash --delete-branch
