@@ -29,3 +29,7 @@ BREAKING CHANGE: clients must use /api/v2/auth/refresh.
 ```
 
 The first Release Please pull request includes the complete existing history. Later releases include only commits since the previous release tag.
+
+## Verifying the release workflow
+
+To verify the full release path after changing the workflow, merge a small `feat:` or `fix:` pull request. Release Please should create a release pull request, enable squash auto-merge, wait for the required checks, then publish the next tag and GitHub Release.
