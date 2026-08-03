@@ -22,6 +22,16 @@ docker compose down -v
 
 If `make` is installed, the same commands are available as `make up`, `make health`, `make logs-api`, `make reset` and `make up-observability`. Run `make help` to list them.
 
+## Git hooks
+
+Enable the repository hook once after cloning:
+
+```bash
+make hooks-install
+```
+
+Before each commit it verifies formatting of staged C# files, performs a clean build and runs unit tests. The formatting baseline is migrated incrementally, so existing unrelated files do not block a commit. `make pre-commit` runs the build and unit-test parts manually. Integration tests remain a separate command (`make test-integration`) because they start Docker containers.
+
 ## What it demonstrates
 
 - Access JWT signed by RS256; refresh token kept in an HttpOnly/Secure/SameSite cookie and rotated on use.

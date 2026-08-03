@@ -1,0 +1,21 @@
+#!/usr/bin/env sh
+
+set -eu
+
+repository_root=$(git rev-parse --show-toplevel)
+cd "$repository_root"
+
+staged_csharp_files=$(git diff --cached --name-only --diff-filter=ACMR -- '*.cs')
+
+if [ -n "$staged_csharp_files" ]; then
+    echo "pre-commit: checking formatting of staged C# files"
+    # Deliberately checks only changed files while the pre-existing formatting
+    # baseline is migrated incrementally.
+    dotnet format AuthService.sln --verify-no-changes --no-restore --include $staged_csharp_files
+fi
+
+echo "pre-commit: building solution"
+dotnet build AuthService.sln --no-restore --no-incremental
+
+echo "pre-commit: running unit tests"
+dotnet test AuthService.UnitTests/AuthService.UnitTests.csproj --no-restore --no-build

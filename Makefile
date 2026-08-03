@@ -6,7 +6,7 @@ COMPOSE := docker compose
 .DEFAULT_GOAL := help
 
 .PHONY: help up up-observability down reset ps logs logs-api logs-db health mailpit \
-	build restore run format format-check test test-unit test-integration \
+	build restore run format format-check test test-unit test-integration pre-commit hooks-install \
 	migrate-add migrate-update compose-config semgrep semgrep-ci semgrep-owasp
 
 help:
@@ -19,6 +19,8 @@ help:
 	@echo "  make logs-api           Follow API logs"
 	@echo "  make mailpit            Print the local Mailpit URL"
 	@echo "  make test               Run all tests"
+	@echo "  make pre-commit         Run the checks performed before a commit"
+	@echo "  make hooks-install      Enable versioned Git hooks for this clone"
 	@echo "  make migrate-add NAME=Name  Add an EF Core migration"
 
 up:
@@ -77,6 +79,13 @@ test-unit:
 
 test-integration:
 	dotnet test $(INTEGRATION_TESTS) --no-restore
+
+pre-commit:
+	$(MAKE) build
+	$(MAKE) test-unit
+
+hooks-install:
+	git config core.hooksPath .githooks
 
 migrate-add:
 	dotnet ef migrations add $(NAME) --project $(API_PROJECT) --startup-project $(API_PROJECT)
