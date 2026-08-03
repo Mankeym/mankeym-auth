@@ -7,8 +7,11 @@ namespace AuthService.Api.Features.Audit;
 
 public class AuditLogger(
     IHttpContextAccessor httpContextAccessor,
-    ILogger<AuditLogger> logger) : IAuditLogger
+    ILogger<AuditLogger> logger,
+    IConfiguration configuration,
+    IHostEnvironment environment) : IAuditLogger
 {
+    private readonly byte[] _hashKey = GetHashKey(configuration, environment);
     private static readonly JsonSerializerOptions JsonOptions = new() {
         ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles
     };
@@ -22,7 +25,7 @@ public class AuditLogger(
         Guid? actorUserId = Guid.TryParse(actorUserIdStr, out var parsedId) ? parsedId : null;
 
         var ip = httpContext?.Connection?.RemoteIpAddress?.ToString() ?? "Unknown";
-        var ipHash = ComputeHash(ip);
+        var ipHash = ComputeHash(ip, _hashKey);
 
         var correlationId = httpContext?.Request.Headers["X-Correlation-ID"].FirstOrDefault()
                             ?? httpContext?.TraceIdentifier
@@ -49,10 +52,25 @@ public class AuditLogger(
         context.AuditEvents.Add(auditEvent);
     }
 
-    private static string ComputeHash(string input)
+    private static byte[] GetHashKey(IConfiguration configuration, IHostEnvironment environment)
     {
-        var saltedInput = input + "Your_App_Specific_Salt";
-        var bytes = System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(saltedInput));
+        var configuredKey = configuration["Audit:HashKey"];
+        if (!string.IsNullOrWhiteSpace(configuredKey))
+        {
+            return System.Text.Encoding.UTF8.GetBytes(configuredKey);
+        }
+
+        if (environment.IsDevelopment())
+        {
+            return System.Security.Cryptography.RandomNumberGenerator.GetBytes(32);
+        }
+
+        throw new InvalidOperationException("Audit:HashKey must be configured outside Development.");
+    }
+
+    private static string ComputeHash(string input, byte[] key)
+    {
+        var bytes = System.Security.Cryptography.HMACSHA256.HashData(key, System.Text.Encoding.UTF8.GetBytes(input));
         return Convert.ToHexString(bytes).ToLowerInvariant();
     }
 }

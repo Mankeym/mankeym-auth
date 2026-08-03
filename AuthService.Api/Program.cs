@@ -291,8 +291,13 @@ if (app.Environment.IsDevelopment())
     app.MapScalarApiReference();
     Console.WriteLine("Scalar is available at http://localhost:5071/scalar");
     using var scope = app.Services.CreateScope();
-    var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    await dbContext.Database.MigrateAsync();
+
+    if (builder.Configuration.GetValue("Database:ApplyMigrations", true))
+    {
+        var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        await dbContext.Database.MigrateAsync();
+    }
+
     await DbInitializer.SeedRolesAndPermissionsAsync(scope.ServiceProvider);
 }
 app.MapHealthChecks("/health/live", new HealthCheckOptions

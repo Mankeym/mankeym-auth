@@ -98,5 +98,7 @@ jobs:
         run: dotnet tool install --global dotnet-ef --version 9.*
       - name: Validate EF model has no pending migration
         run: dotnet ef migrations has-pending-model-changes --project AuthService.Api/AuthService.Api.csproj --startup-project AuthService.Api/AuthService.Api.csproj
+        env:
+          ConnectionStrings__DB_CONNECTION: Host=localhost;Port=5432;Database=authservice;Username=postgres;Password=ci-only-not-a-secret
       - name: Build release image with SHA tag
         run: docker build --tag authservice:${{ github.sha }} .

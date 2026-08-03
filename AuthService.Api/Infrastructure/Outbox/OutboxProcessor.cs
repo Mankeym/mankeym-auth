@@ -10,6 +10,7 @@ public sealed class OutboxProcessor(
     ILogger<OutboxProcessor> logger) : BackgroundService
 {
     internal const int MaxAttempts = 5;
+    private const int BatchSize = 20;
     private static readonly TimeSpan PollInterval = TimeSpan.FromSeconds(5);
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -39,52 +40,89 @@ public sealed class OutboxProcessor(
         var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var transport = scope.ServiceProvider.GetRequiredService<IOutboxTransport>();
         var now = DateTime.UtcNow;
+        var usesPostgres = dbContext.Database.IsNpgsql();
+        Microsoft.EntityFrameworkCore.Storage.IDbContextTransaction? transaction = null;
 
-        var messages = await dbContext.OutboxMessages
-            .Where(m => m.ProcessedAtUtc == null
-                        && m.Attempts < MaxAttempts
-                        && (m.NextAttemptAtUtc == null || m.NextAttemptAtUtc <= now))
-            .OrderBy(m => m.NextAttemptAtUtc)
-            .ThenBy(m => m.OccurredAtUtc)
-            .Take(20)
-            .ToListAsync(cancellationToken);
-        AuthTelemetry.SetOutboxBacklog(messages.Count);
-        var oldestPending = await dbContext.OutboxMessages
-            .Where(m => m.ProcessedAtUtc == null)
-            .MinAsync(m => (DateTime?)m.OccurredAtUtc, cancellationToken);
-        AuthTelemetry.SetOutboxLag(oldestPending is null ? TimeSpan.Zero : DateTime.UtcNow - oldestPending.Value);
-
-        foreach (var message in messages)
+        try
         {
-            message.Attempts++;
-
-            try
+            List<OutboxMessage> messages;
+            if (usesPostgres)
             {
-                using var activity = AuthTelemetry.ActivitySource.StartActivity("outbox.deliver");
-                activity?.SetTag("outbox.message_id", message.Id);
-                activity?.SetTag("outbox.type", message.Type);
-                await transport.DeliverAsync(
-                    new OutboxDelivery(message.Id, message.Type, message.Payload),
-                    cancellationToken);
-                message.ProcessedAtUtc = DateTime.UtcNow;
-                message.NextAttemptAtUtc = null;
-                message.Error = null;
-                AuthTelemetry.OutboxDeliveries.Add(1, new KeyValuePair<string, object?>("outbox.type", message.Type));
+                transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
+                messages = await dbContext.OutboxMessages
+                    .FromSqlInterpolated($"""
+                        SELECT * FROM "OutboxMessages"
+                        WHERE "ProcessedAtUtc" IS NULL
+                          AND "Attempts" < {MaxAttempts}
+                          AND ("NextAttemptAtUtc" IS NULL OR "NextAttemptAtUtc" <= {now})
+                        ORDER BY "NextAttemptAtUtc", "OccurredAtUtc"
+                        LIMIT {BatchSize}
+                        FOR UPDATE SKIP LOCKED
+                        """)
+                    .ToListAsync(cancellationToken);
             }
-            catch (Exception ex) when (ex is not OperationCanceledException)
+            else
             {
-                message.Error = "Delivery failed.";
-                message.NextAttemptAtUtc = message.Attempts < MaxAttempts
-                    ? DateTime.UtcNow.Add(GetRetryDelay(message.Attempts))
-                    : null;
-                logger.LogWarning(ex, "Outbox message {MessageId} delivery attempt {Attempt} failed.", message.Id, message.Attempts);
-                AuthTelemetry.OutboxDeliveryFailures.Add(1, new KeyValuePair<string, object?>("outbox.type", message.Type));
+                messages = await dbContext.OutboxMessages
+                    .Where(m => m.ProcessedAtUtc == null
+                                && m.Attempts < MaxAttempts
+                                && (m.NextAttemptAtUtc == null || m.NextAttemptAtUtc <= now))
+                    .OrderBy(m => m.NextAttemptAtUtc)
+                    .ThenBy(m => m.OccurredAtUtc)
+                    .Take(BatchSize)
+                    .ToListAsync(cancellationToken);
+            }
+
+            AuthTelemetry.SetOutboxBacklog(messages.Count);
+            var oldestPending = await dbContext.OutboxMessages
+                .Where(m => m.ProcessedAtUtc == null)
+                .MinAsync(m => (DateTime?)m.OccurredAtUtc, cancellationToken);
+            AuthTelemetry.SetOutboxLag(oldestPending is null ? TimeSpan.Zero : DateTime.UtcNow - oldestPending.Value);
+
+            foreach (var message in messages)
+            {
+                message.Attempts++;
+
+                try
+                {
+                    using var activity = AuthTelemetry.ActivitySource.StartActivity("outbox.deliver");
+                    activity?.SetTag("outbox.message_id", message.Id);
+                    activity?.SetTag("outbox.type", message.Type);
+                    await transport.DeliverAsync(
+                        new OutboxDelivery(message.Id, message.Type, message.Payload),
+                        cancellationToken);
+                    message.ProcessedAtUtc = DateTime.UtcNow;
+                    message.NextAttemptAtUtc = null;
+                    message.Error = null;
+                    AuthTelemetry.OutboxDeliveries.Add(1, new KeyValuePair<string, object?>("outbox.type", message.Type));
+                }
+                catch (Exception ex) when (ex is not OperationCanceledException)
+                {
+                    message.Error = "Delivery failed.";
+                    message.NextAttemptAtUtc = message.Attempts < MaxAttempts
+                        ? DateTime.UtcNow.Add(GetRetryDelay(message.Attempts))
+                        : null;
+                    logger.LogWarning(ex, "Outbox message {MessageId} delivery attempt {Attempt} failed.", message.Id, message.Attempts);
+                    AuthTelemetry.OutboxDeliveryFailures.Add(1, new KeyValuePair<string, object?>("outbox.type", message.Type));
+                }
+            }
+
+            if (messages.Count > 0)
+            {
+                await dbContext.SaveChangesAsync(cancellationToken);
+            }
+
+            if (transaction != null)
+            {
+                await transaction.CommitAsync(cancellationToken);
             }
         }
-
-        if (messages.Count > 0)
+        finally
         {
-            await dbContext.SaveChangesAsync(cancellationToken);
+            if (transaction != null)
+            {
+                await transaction.DisposeAsync();
+            }
         }
     }
 

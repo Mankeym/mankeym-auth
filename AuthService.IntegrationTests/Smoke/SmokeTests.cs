@@ -8,6 +8,7 @@ using System.Net;
 using AuthService.Api;
 using AuthService.Api.Infrastructure.Persistence;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Configuration;
 
 namespace AuthService.IntegrationTests.Smoke;
 
@@ -19,6 +20,12 @@ public class SmokeTests : IClassFixture<WebApplicationFactory<Program>>
     {
         _factory = factory.WithWebHostBuilder(builder =>
         {
+            builder.ConfigureAppConfiguration((_, configuration) =>
+                configuration.AddInMemoryCollection(new Dictionary<string, string?>
+                {
+                    ["Database:ApplyMigrations"] = "false"
+                }));
+
             builder.ConfigureServices(services =>
             {
                 services.RemoveAll(typeof(DbContextOptions<AppDbContext>));
