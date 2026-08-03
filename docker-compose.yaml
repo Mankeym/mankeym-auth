@@ -11,32 +11,79 @@
         container_name: authservice-api
         ports:
             - "5000:8080"
-        env_file:
-            - .env
         environment:
             - ASPNETCORE_ENVIRONMENT=Development
-            - JwtSettings__SecretKey=${JWT_SECRET_KEY}
-            - ConnectionStrings__DefaultConnection=Host=postgres;Database=authdb;Username=postgres;Password=${POSTGRES_PASSWORD}
+            - ConnectionStrings__DB_CONNECTION=Host=postgres;Port=5432;Database=authdb;Username=postgres;Password=${POSTGRES_PASSWORD:-local-dev-password}
+            - Redis__Configuration=redis:6379,abortConnect=false
+            - Smtp__Host=mailpit
+            - Smtp__Port=1025
         depends_on:
-            - postgres
-            - redis
+            postgres:
+                condition: service_healthy
+            redis:
+                condition: service_healthy
+            mailpit:
+                condition: service_started
 
     postgres:
         image: postgres:16-alpine
         container_name: authservice-postgres
         environment:
             - POSTGRES_USER=postgres
-            - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+            - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-local-dev-password}
             - POSTGRES_DB=authdb
         ports:
             - "5435:5432"
         volumes:
             - postgres_data:/var/lib/postgresql/data
+        healthcheck:
+            test: [ "CMD-SHELL", "pg_isready -U postgres -d authdb" ]
+            interval: 5s
+            timeout: 3s
+            retries: 10
     redis:
-        image: redis:latest
+        image: redis:7.4-alpine
+        container_name: authservice-redis
         ports:
             - "6390:6379"
         restart: always
+        healthcheck:
+            test: [ "CMD", "redis-cli", "ping" ]
+            interval: 5s
+            timeout: 3s
+            retries: 10
+
+    mailpit:
+        image: axllent/mailpit:v1.27
+        container_name: authservice-mailpit
+        ports:
+            - "8025:8025"
+        healthcheck:
+            test: [ "CMD", "wget", "-q", "-O", "/dev/null", "http://localhost:8025/livez" ]
+            interval: 5s
+            timeout: 3s
+            retries: 10
+
+    prometheus:
+        image: prom/prometheus:v3.4.1
+        profiles: [ "observability" ]
+        ports:
+            - "9090:9090"
+        volumes:
+            - ./observability/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+            - ./observability/prometheus/alerts.yml:/etc/prometheus/alerts.yml:ro
+
+    grafana:
+        image: grafana/grafana:11.6.0
+        profiles: [ "observability" ]
+        ports:
+            - "3000:3000"
+        environment:
+            - GF_SECURITY_ADMIN_USER=admin
+            - GF_SECURITY_ADMIN_PASSWORD=admin
+        volumes:
+            - ./observability/grafana/provisioning:/etc/grafana/provisioning:ro
+            - ./observability/grafana/dashboards:/var/lib/grafana/dashboards:ro
 
 volumes:
     postgres_data:

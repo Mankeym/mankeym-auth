@@ -7,7 +7,6 @@ COPY AuthService.sln .
 COPY AuthService.Api/*.csproj AuthService.Api/
 COPY AuthService.UnitTests/*.csproj AuthService.UnitTests/
 COPY AuthService.IntegrationTests/*.csproj AuthService.IntegrationTests/
-COPY AuthService.ArchitectureTests/*.csproj AuthService.ArchitectureTests/
 
 # Восстанавливаем все зависимости для всего решения
 RUN dotnet restore
@@ -25,13 +24,12 @@ RUN dotnet publish "AuthService.Api.csproj" -c Release -o /app/publish --no-rest
 # ===== STAGE 3: Runtime =====
 FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS final
 WORKDIR /app
-RUN adduser --disabled-password --no-create-home appuser
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends curl \
+    && rm -rf /var/lib/apt/lists/* \
+    && adduser --disabled-password --no-create-home appuser
 
 COPY --from=publish /app/publish .
-
-# Скопируем .env и проверим
-COPY .env .
-RUN ls -la /app/.env || echo ".env NOT FOUND"
 
 RUN chown -R appuser:appuser /app
 USER appuser

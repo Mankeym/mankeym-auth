@@ -1,0 +1,4 @@
+# Canonical Docker Compose entry point.
+# The service definitions live in docker-compose.yaml to preserve existing local commands.
+include:
+  - path: docker-compose.yaml
