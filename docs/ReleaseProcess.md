@@ -4,6 +4,8 @@ Release Please creates and maintains a release pull request from commits merged 
 
 The workflow uses the `RELEASE_PLEASE_TOKEN` Actions secret rather than `GITHUB_TOKEN`, so the normal CI workflow runs on generated release pull requests.
 
+Release pull requests have squash auto-merge enabled by the workflow. GitHub merges them only after all status checks required by the `main` ruleset have passed and the branch is up to date.
+
 ## Versioning rules
 
 | Commit format | Version change | Example |
