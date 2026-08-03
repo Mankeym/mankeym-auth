@@ -27,10 +27,10 @@ jobs:
           RELEASE_PRS: ${{ steps.release.outputs.prs }}
         run: |
           pr_number="$(echo "$RELEASE_PRS" | jq -r '.[0].number')"
-          auto_merge_enabled="$(gh pr view "$pr_number" --json autoMergeRequest --jq '.autoMergeRequest != null')"
+          auto_merge_enabled="$(gh pr view "$pr_number" --repo "$GITHUB_REPOSITORY" --json autoMergeRequest --jq '.autoMergeRequest != null')"
 
           if [ "$auto_merge_enabled" = "true" ]; then
             exit 0
           fi
 
-          gh pr merge "$pr_number" --auto --squash --delete-branch
+          gh pr merge "$pr_number" --repo "$GITHUB_REPOSITORY" --auto --squash --delete-branch
