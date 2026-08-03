@@ -120,6 +120,7 @@ Use only placeholders from [sample HTTP requests](examples/AuthService.http) or 
 See the versioned [API reference](docs/API.md) for endpoint permissions, request conventions, and response behavior.
 
 Release Please generates [CHANGELOG.md](CHANGELOG.md) and release pull requests from Conventional Commit messages.
+See the [release process](docs/ReleaseProcess.md) for commit formats and their SemVer version increments.
 
 ## Tests and quality checks
 
