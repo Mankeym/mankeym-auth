@@ -23,6 +23,8 @@ public class SmokeTests : IClassFixture<WebApplicationFactory<Program>>
             builder.ConfigureAppConfiguration((_, configuration) =>
                 configuration.AddInMemoryCollection(new Dictionary<string, string?>
                 {
+                    ["ConnectionStrings:DB_CONNECTION"] = "Host=localhost;Database=authservice_smoke;Username=postgres;Password=postgres",
+                    ["Redis:Configuration"] = "localhost:6379,abortConnect=false",
                     ["Database:ApplyMigrations"] = "false"
                 }));
 
