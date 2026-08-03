@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.2](https://github.com/Mankeym/mankeym-auth/compare/v0.3.1...v0.3.2) (2026-08-03)
+
+
+### 📚 Documentation
+
+* complete changelog history ([b8d84de](https://github.com/Mankeym/mankeym-auth/commit/b8d84de2d137409401a1b7094d61f6ace15d9245))
+
 ## [0.3.1](https://github.com/Mankeym/mankeym-auth/compare/v0.3.0...v0.3.1) (2026-08-03)
 
 
