@@ -25,7 +25,7 @@ jobs:
       - name: Build
         run: dotnet build AuthService.sln --configuration Release --no-restore
       - name: Unit tests with coverage
-        run: dotnet test AuthService.UnitTests/AuthService.UnitTests.csproj --configuration Release --no-build --settings coverage.runsettings --collect:"XPlat Code Coverage" --logger "trx;LogFileName=unit.trx" --results-directory TestResults/unit
+        run: dotnet test AuthService.UnitTests/AuthService.UnitTests.csproj --configuration Release --no-build --settings coverage.runsettings --logger "trx;LogFileName=unit.trx" --results-directory TestResults/unit
       - name: Enforce unit coverage baseline
         run: |
           python3 - <<'PY'
@@ -44,7 +44,7 @@ jobs:
               sys.exit("Unit line coverage is below the required baseline.")
           PY
       - name: Integration tests with Testcontainers
-        run: dotnet test AuthService.IntegrationTests/AuthService.IntegrationTests.csproj --configuration Release --no-build --settings coverage.runsettings --collect:"XPlat Code Coverage" --logger "trx;LogFileName=integration.trx" --results-directory TestResults/integration
+        run: dotnet test AuthService.IntegrationTests/AuthService.IntegrationTests.csproj --configuration Release --no-build --settings coverage.runsettings --logger "trx;LogFileName=integration.trx" --results-directory TestResults/integration
       - name: Upload test results and coverage
         if: always()
         uses: actions/upload-artifact@v4
