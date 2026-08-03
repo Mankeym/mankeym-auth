@@ -119,6 +119,8 @@ dotnet ef database update --project AuthService.Api/AuthService.Api.csproj --sta
 
 Use only placeholders from [sample HTTP requests](examples/AuthService.http). The file contains no credentials or real tokens.
 
+See the versioned [API reference](docs/API.md) for endpoint permissions, request conventions, and response behavior.
+
 ## Tests and quality checks
 
 ```bash
