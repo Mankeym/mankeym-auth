@@ -1,11 +1,11 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace AuthService.Api.Features.Sessions.RevokeSession;
 
 [ApiController]
 [Route("api/v1/sessions/{sessionId}")]
-public class RevokeSessionEndPoint(IRevokeSessionHandler revokeSessionHandler): ControllerBase
+public class RevokeSessionEndPoint(IRevokeSessionHandler revokeSessionHandler) : ControllerBase
 {
     [HttpDelete]
     [Authorize]

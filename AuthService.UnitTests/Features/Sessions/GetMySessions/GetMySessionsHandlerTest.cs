@@ -1,5 +1,5 @@
-﻿using System.Security.Claims;
 using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 using AuthService.Api.Features.Sessions.GetMySessions;
 using AuthService.Api.Infrastructure.Persistence;
 using AuthService.Api.Infrastructure.Persistence.Entities;

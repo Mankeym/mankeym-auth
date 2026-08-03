@@ -1,4 +1,4 @@
-﻿using System.Security.Claims;
+using System.Security.Claims;
 using AuthService.Api.Features.Audit;
 using AuthService.Api.Infrastructure.Persistence;
 using AuthService.Api.Infrastructure.Persistence.Entities;
@@ -22,7 +22,7 @@ public class RevokeSessionHandler(
     UserManager<ApplicationUser> userManager,
     AppDbContext dbContext,
     IAuditLogger auditLogger
-    ): IRevokeSessionHandler
+    ) : IRevokeSessionHandler
 {
     public async Task<RevokeSessionResult> RevokeSessionAsync(Guid sessionId, ClaimsPrincipal claimsPrincipal)
     {

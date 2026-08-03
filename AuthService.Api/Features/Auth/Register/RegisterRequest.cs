@@ -1,4 +1,4 @@
-﻿namespace AuthService.Api.Features.Auth.Register;
+namespace AuthService.Api.Features.Auth.Register;
 
 public class RegisterRequest
 {

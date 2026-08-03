@@ -1,14 +1,14 @@
-﻿using Microsoft.AspNetCore.Mvc.Testing;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Diagnostics.HealthChecks;
-using Xunit;
-using FluentAssertions;
 using System.Net;
 using AuthService.Api;
 using AuthService.Api.Infrastructure.Persistence;
-using Microsoft.Extensions.DependencyInjection.Extensions;
+using FluentAssertions;
+using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
+using Xunit;
 
 namespace AuthService.IntegrationTests.Smoke;
 

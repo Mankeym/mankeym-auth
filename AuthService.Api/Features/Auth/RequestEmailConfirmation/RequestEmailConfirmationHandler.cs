@@ -1,4 +1,4 @@
-﻿using System.Text;
+using System.Text;
 using System.Text.Json;
 using AuthService.Api.Features.Audit;
 using AuthService.Api.Infrastructure.Persistence;
@@ -22,7 +22,7 @@ public class RequestEmailConfirmationHandler(
     AppDbContext dbContext,
     IFrontendUrlProvider urlProvider,
     IAuditLogger auditLogger
-): IRequestEmailConfirmationHandler
+) : IRequestEmailConfirmationHandler
 {
     public async Task<RequestEmailConfirmationResult> RequestEmailConfirmationAsync(string email)
     {

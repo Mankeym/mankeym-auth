@@ -1,4 +1,4 @@
-﻿using System.Security.Claims;
+using System.Security.Claims;
 using AuthService.Api.Common.Authorization;
 using AuthService.Api.Infrastructure.Persistence;
 using AuthService.Api.Infrastructure.Persistence.Entities;
@@ -39,8 +39,8 @@ public static class DbInitializer
             var rolePermissions = new Dictionary<string, List<string>>
             {
                 ["User"] = new List<string> { Permissions.ProfileRead, Permissions.ProfileUpdate },
-                ["Moderator"] = new List<string> {  Permissions.ProfileRead, Permissions.ProfileUpdate, Permissions.AuditView },
-                ["Admin"] = new List<string> { Permissions.ProfileAll, Permissions.UsersManage,  Permissions.AuditView, Permissions.RolesAll }
+                ["Moderator"] = new List<string> { Permissions.ProfileRead, Permissions.ProfileUpdate, Permissions.AuditView },
+                ["Admin"] = new List<string> { Permissions.ProfileAll, Permissions.UsersManage, Permissions.AuditView, Permissions.RolesAll }
             };
 
             foreach (var (roleName, permissionCodes) in rolePermissions)

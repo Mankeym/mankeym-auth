@@ -1,7 +1,7 @@
 using System.Security.Claims;
 using AuthService.Api.Infrastructure.Authorization;
-using Microsoft.AspNetCore.Authorization;
 using FluentAssertions;
+using Microsoft.AspNetCore.Authorization;
 
 namespace AuthService.UnitTests.Infrastructure.Authorization;
 

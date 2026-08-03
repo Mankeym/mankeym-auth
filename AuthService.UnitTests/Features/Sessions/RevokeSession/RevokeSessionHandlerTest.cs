@@ -1,4 +1,4 @@
-﻿using System.Security.Claims;
+using System.Security.Claims;
 using AuthService.Api.Features.Audit;
 using AuthService.Api.Features.Sessions.RevokeSession;
 using AuthService.Api.Infrastructure.Persistence;
@@ -12,7 +12,7 @@ using Moq;
 namespace AuthService.UnitTests.Features.Sessions.RevokeSession;
 
 [TestSubject(typeof(RevokeSessionHandler))]
-public class RevokeSessionHandlerTest: IDisposable
+public class RevokeSessionHandlerTest : IDisposable
 {
     private readonly Mock<IAuditLogger> _auditLoggerMock;
     private readonly Mock<UserManager<ApplicationUser>> _userManagerMock;
@@ -33,7 +33,7 @@ public class RevokeSessionHandlerTest: IDisposable
             .Options;
         _userManagerMock = new Mock<UserManager<ApplicationUser>>(
             userStoreMock.Object, null!, null!, null!, null!, null!, null!, null!, null!);
-        _auditLoggerMock =  new Mock<IAuditLogger>();
+        _auditLoggerMock = new Mock<IAuditLogger>();
         _dbContextMock = new AppDbContext(options);
         _handler = new RevokeSessionHandler(_userManagerMock.Object, _dbContextMock, _auditLoggerMock.Object);
     }

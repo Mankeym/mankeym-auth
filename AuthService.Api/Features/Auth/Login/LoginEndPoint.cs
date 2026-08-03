@@ -1,6 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
-
 using AuthService.Api.Common.RateLimiting;
+using Microsoft.AspNetCore.Mvc;
 
 namespace AuthService.Api.Features.Auth.Login;
 

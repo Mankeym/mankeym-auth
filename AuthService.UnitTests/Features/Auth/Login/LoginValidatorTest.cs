@@ -1,4 +1,4 @@
-﻿using AuthService.Api.Features.Auth.Login;
+using AuthService.Api.Features.Auth.Login;
 using FluentValidation.TestHelper;
 
 namespace AuthService.UnitTests.Features.Auth.Login;

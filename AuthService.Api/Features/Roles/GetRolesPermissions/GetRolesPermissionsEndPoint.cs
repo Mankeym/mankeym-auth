@@ -1,4 +1,4 @@
-﻿using AuthService.Api.Common.Authorization;
+using AuthService.Api.Common.Authorization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -7,7 +7,7 @@ namespace AuthService.Api.Features.Roles.GetRolesPermissions;
 [ApiController]
 [Route("/api/v1/roles/{role}/permissions")]
 [Authorize(Policy = Permissions.RolesRead)]
-public class GetRolesPermissionsEndPoint(IGetRolesPermissionsHandler handler): ControllerBase
+public class GetRolesPermissionsEndPoint(IGetRolesPermissionsHandler handler) : ControllerBase
 {
     [HttpGet]
     public async Task<IActionResult> Get([FromRoute(Name = "role")] string roleName)

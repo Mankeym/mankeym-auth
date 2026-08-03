@@ -1,4 +1,4 @@
-﻿using System.Security.Claims;
+using System.Security.Claims;
 using System.Text.Json;
 using AuthService.Api.Infrastructure.Persistence;
 using AuthService.Api.Infrastructure.Persistence.Entities;
@@ -12,7 +12,8 @@ public class AuditLogger(
     IHostEnvironment environment) : IAuditLogger
 {
     private readonly byte[] _hashKey = GetHashKey(configuration, environment);
-    private static readonly JsonSerializerOptions JsonOptions = new() {
+    private static readonly JsonSerializerOptions JsonOptions = new()
+    {
         ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles
     };
 

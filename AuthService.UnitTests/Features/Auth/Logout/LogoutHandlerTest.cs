@@ -1,4 +1,4 @@
-﻿using AuthService.Api.Features.Audit;
+using AuthService.Api.Features.Audit;
 using AuthService.Api.Features.Auth.Logout;
 using AuthService.Api.Infrastructure.Persistence;
 using AuthService.Api.Infrastructure.Persistence.Entities;

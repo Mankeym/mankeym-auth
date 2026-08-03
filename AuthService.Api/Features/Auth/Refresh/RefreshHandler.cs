@@ -1,9 +1,9 @@
-﻿using System.Security.Cryptography;
+using System.Security.Cryptography;
 using AuthService.Api.Features.Audit;
+using AuthService.Api.Infrastructure.Observability;
 using AuthService.Api.Infrastructure.Persistence;
 using AuthService.Api.Infrastructure.Persistence.Entities;
 using AuthService.Api.Infrastructure.Tokens;
-using AuthService.Api.Infrastructure.Observability;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 

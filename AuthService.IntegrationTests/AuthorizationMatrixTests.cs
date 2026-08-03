@@ -1,9 +1,9 @@
 using System.Net;
+using FluentAssertions;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
-using FluentAssertions;
 
 namespace AuthService.IntegrationTests;
 

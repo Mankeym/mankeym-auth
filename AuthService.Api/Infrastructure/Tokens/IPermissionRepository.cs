@@ -1,4 +1,4 @@
-﻿using AuthService.Api.Infrastructure.Persistence.Entities;
+using AuthService.Api.Infrastructure.Persistence.Entities;
 
 namespace AuthService.Api.Infrastructure.Tokens;
 

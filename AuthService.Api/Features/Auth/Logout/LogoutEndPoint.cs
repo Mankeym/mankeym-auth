@@ -1,10 +1,10 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 
 namespace AuthService.Api.Features.Auth.Logout;
 
 [ApiController]
 [Route("api/v1/auth/logout")]
-public class LogoutEndPoint(ILogoutHandler logoutHandler): ControllerBase
+public class LogoutEndPoint(ILogoutHandler logoutHandler) : ControllerBase
 {
     [HttpPost]
     public async Task<IActionResult> Post()
@@ -22,7 +22,7 @@ public class LogoutEndPoint(ILogoutHandler logoutHandler): ControllerBase
 
         if (!result.Success)
         {
-            return BadRequest(new { Error = result.Error});
+            return BadRequest(new { Error = result.Error });
         }
 
         return Ok(new { message = "Logged out successfully." });

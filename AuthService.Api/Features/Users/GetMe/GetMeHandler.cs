@@ -1,4 +1,4 @@
-﻿using System.IdentityModel.Tokens.Jwt;
+using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using AuthService.Api.Infrastructure.Persistence.Entities;
 using Microsoft.AspNetCore.Identity;
@@ -22,7 +22,7 @@ public class UserDto
 public class GetMeResult
 {
     public bool Success { get; set; }
-    public  UserDto? User { get; set; }
+    public UserDto? User { get; set; }
     public string ErrorMessage { get; set; } = string.Empty;
 }
 public class GetMeHandler(UserManager<ApplicationUser> userManager) : IGetMeHandler

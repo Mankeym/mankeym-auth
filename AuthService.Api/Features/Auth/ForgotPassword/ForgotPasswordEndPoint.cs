@@ -1,13 +1,12 @@
-﻿using Microsoft.AspNetCore.Identity.Data;
-using Microsoft.AspNetCore.Mvc;
-
 using AuthService.Api.Common.RateLimiting;
+using Microsoft.AspNetCore.Identity.Data;
+using Microsoft.AspNetCore.Mvc;
 
 namespace AuthService.Api.Features.Auth.ForgotPassword;
 
 [ApiController]
 [Route("api/v1/auth/forgot-password")]
-public class ForgotPasswordEndPoint(IForgotPasswordHandler handler, IAuthRateLimiter rateLimiter): ControllerBase
+public class ForgotPasswordEndPoint(IForgotPasswordHandler handler, IAuthRateLimiter rateLimiter) : ControllerBase
 {
     [HttpPost]
     public async Task<IActionResult> Post(ForgotPasswordRequest request)

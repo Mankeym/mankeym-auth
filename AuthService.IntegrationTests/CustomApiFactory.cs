@@ -1,4 +1,4 @@
-﻿using System.Text;
+using System.Text;
 using AuthService.Api.Infrastructure.Persistence;
 using AuthService.Api.Infrastructure.Persistence.Entities;
 using Microsoft.AspNetCore.Hosting;

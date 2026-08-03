@@ -1,4 +1,4 @@
-﻿using System.Security.Cryptography;
+using System.Security.Cryptography;
 using System.Text;
 using AuthService.Api.Features.Audit;
 using AuthService.Api.Features.Auth.ConfirmEmail;

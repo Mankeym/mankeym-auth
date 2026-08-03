@@ -1,4 +1,4 @@
-﻿using System.Text;
+using System.Text;
 using System.Text.Json;
 using AuthService.Api.Features.Audit;
 using AuthService.Api.Infrastructure.Persistence;
@@ -61,6 +61,6 @@ public class ForgotPasswordHandler(
 
         await dbContext.SaveChangesAsync();
 
-        return new ForgotPasswordResponse(true, genericMessage );
+        return new ForgotPasswordResponse(true, genericMessage);
     }
 }

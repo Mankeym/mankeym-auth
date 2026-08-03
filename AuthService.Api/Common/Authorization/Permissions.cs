@@ -1,4 +1,4 @@
-﻿namespace AuthService.Api.Common.Authorization;
+namespace AuthService.Api.Common.Authorization;
 
 public static class Permissions
 {

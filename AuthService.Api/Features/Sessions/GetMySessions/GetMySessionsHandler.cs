@@ -1,4 +1,4 @@
-﻿using System.Security.Claims;
+using System.Security.Claims;
 using AuthService.Api.Infrastructure.Persistence;
 using AuthService.Api.Infrastructure.Persistence.Entities;
 using Microsoft.AspNetCore.Identity;
@@ -30,11 +30,11 @@ public record UserSessionDTO
     public string? RevokeReason { get; set; }
 }
 
-public class GetMySessionsHandler(UserManager<ApplicationUser> userManager, AppDbContext dbContext): IGetMySessionsHandler
+public class GetMySessionsHandler(UserManager<ApplicationUser> userManager, AppDbContext dbContext) : IGetMySessionsHandler
 {
     public async Task<GetMySessionsResult> GetMySessions(ClaimsPrincipal claimsPrincipal)
     {
-        var userIdString =  userManager.GetUserId(claimsPrincipal);
+        var userIdString = userManager.GetUserId(claimsPrincipal);
 
         if (string.IsNullOrEmpty(userIdString) || !Guid.TryParse(userIdString, out var userId))
         {

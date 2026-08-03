@@ -1,12 +1,11 @@
-﻿using Microsoft.AspNetCore.Mvc;
-
 using AuthService.Api.Common.RateLimiting;
+using Microsoft.AspNetCore.Mvc;
 
 namespace AuthService.Api.Features.Auth.Refresh;
 
 [ApiController]
 [Route("api/v1/auth/refresh")]
-public class RefreshEdnPoint(IRefreshHandler refreshHandler, IAuthRateLimiter rateLimiter): ControllerBase
+public class RefreshEdnPoint(IRefreshHandler refreshHandler, IAuthRateLimiter rateLimiter) : ControllerBase
 {
     [HttpPost]
     public async Task<IActionResult> Post()

@@ -1,10 +1,10 @@
-﻿using AuthService.Api.Features.Audit;
-using AuthService.Api.Infrastructure.Persistence.Entities;
+using AuthService.Api.Features.Audit;
+using AuthService.Api.Features.Auth.ExternalCallback;
 using AuthService.Api.Infrastructure.Persistence;
+using AuthService.Api.Infrastructure.Persistence.Entities;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Routing;
-using AuthService.Api.Features.Auth.ExternalCallback;
 
 namespace AuthService.Api.Features.Auth.ExternalChallenge;
 

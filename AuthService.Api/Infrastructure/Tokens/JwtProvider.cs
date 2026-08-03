@@ -1,4 +1,4 @@
-﻿using AuthService.Api.Infrastructure.Persistence.Entities;
+using AuthService.Api.Infrastructure.Persistence.Entities;
 
 namespace AuthService.Api.Infrastructure.Tokens;
 
@@ -8,10 +8,10 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
 using System.Security.Claims;
 using System.Security.Cryptography;
+using System.Threading.Tasks;
 using Common.Options;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
-using System.Threading.Tasks;
 
 public sealed class JwtProvider : IJwtProvider
 {

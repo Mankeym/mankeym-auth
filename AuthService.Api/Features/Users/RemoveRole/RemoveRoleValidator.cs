@@ -1,4 +1,4 @@
-﻿using System.Security.Claims;
+using System.Security.Claims;
 using FluentValidation;
 
 namespace AuthService.Api.Features.Users.RemoveRole;

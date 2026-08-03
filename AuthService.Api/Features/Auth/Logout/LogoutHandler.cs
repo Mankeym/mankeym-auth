@@ -1,4 +1,4 @@
-﻿using AuthService.Api.Features.Audit;
+using AuthService.Api.Features.Audit;
 using AuthService.Api.Infrastructure.Persistence;
 using AuthService.Api.Infrastructure.Tokens;
 using Microsoft.EntityFrameworkCore;
@@ -17,7 +17,7 @@ public record LogoutResult
     public string Error { get; set; } = string.Empty;
 }
 
-public class LogoutHandler(AppDbContext dbContext, IAuditLogger auditLogger): ILogoutHandler
+public class LogoutHandler(AppDbContext dbContext, IAuditLogger auditLogger) : ILogoutHandler
 {
     public async Task<LogoutResult> LogoutAsync(string? rawRequestToken)
     {

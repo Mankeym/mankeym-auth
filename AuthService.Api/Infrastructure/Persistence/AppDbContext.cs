@@ -1,11 +1,11 @@
-﻿using AuthService.Api.Infrastructure.Persistence.Entities;
+using AuthService.Api.Infrastructure.Persistence.Entities;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
 namespace AuthService.Api.Infrastructure.Persistence;
 
-public class AppDbContext: IdentityDbContext<ApplicationUser, ApplicationRole, Guid>
+public class AppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, Guid>
 {
     public AppDbContext()
     {
@@ -18,11 +18,11 @@ public class AppDbContext: IdentityDbContext<ApplicationUser, ApplicationRole, G
 
 
 
-    public virtual DbSet<Permission> Permissions { get; set; }
-    public virtual DbSet<RefreshToken> RefreshTokens { get; set; }
-    public virtual DbSet<OutboxMessage> OutboxMessages { get; set; }
-    public virtual DbSet<UserSession> UserSessions { get; set; }
-    public virtual DbSet<AuditEvent> AuditEvents { get; set; }
+    public virtual DbSet<Permission> Permissions { get; set; } = null!;
+    public virtual DbSet<RefreshToken> RefreshTokens { get; set; } = null!;
+    public virtual DbSet<OutboxMessage> OutboxMessages { get; set; } = null!;
+    public virtual DbSet<UserSession> UserSessions { get; set; } = null!;
+    public virtual DbSet<AuditEvent> AuditEvents { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

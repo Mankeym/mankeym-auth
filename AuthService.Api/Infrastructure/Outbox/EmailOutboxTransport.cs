@@ -13,21 +13,21 @@ public sealed class EmailOutboxTransport(IEmailSender<ApplicationUser> emailSend
         switch (delivery.Type)
         {
             case "PasswordResetEmailRequested":
-            {
-                var payload = JsonSerializer.Deserialize<PasswordResetEmailPayload>(delivery.Payload)
-                    ?? throw new InvalidOperationException("Invalid outbox payload.");
-                var user = new ApplicationUser { Id = payload.UserId };
-                await emailSender.SendPasswordResetLinkAsync(user, payload.Email, payload.ResetLink);
-                break;
-            }
+                {
+                    var payload = JsonSerializer.Deserialize<PasswordResetEmailPayload>(delivery.Payload)
+                        ?? throw new InvalidOperationException("Invalid outbox payload.");
+                    var user = new ApplicationUser { Id = payload.UserId };
+                    await emailSender.SendPasswordResetLinkAsync(user, payload.Email, payload.ResetLink);
+                    break;
+                }
             case "EmailConfirmationEmailRequested":
-            {
-                var payload = JsonSerializer.Deserialize<EmailConfirmationEmailPayload>(delivery.Payload)
-                    ?? throw new InvalidOperationException("Invalid outbox payload.");
-                var user = new ApplicationUser { Id = payload.UserId };
-                await emailSender.SendConfirmationLinkAsync(user, payload.Email, payload.ConfirmationLink);
-                break;
-            }
+                {
+                    var payload = JsonSerializer.Deserialize<EmailConfirmationEmailPayload>(delivery.Payload)
+                        ?? throw new InvalidOperationException("Invalid outbox payload.");
+                    var user = new ApplicationUser { Id = payload.UserId };
+                    await emailSender.SendConfirmationLinkAsync(user, payload.Email, payload.ConfirmationLink);
+                    break;
+                }
             default:
                 throw new InvalidOperationException("Unsupported outbox message type.");
         }

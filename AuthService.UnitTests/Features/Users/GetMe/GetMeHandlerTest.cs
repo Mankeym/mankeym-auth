@@ -1,4 +1,4 @@
-﻿using System.Security.Claims;
+using System.Security.Claims;
 using AuthService.Api.Features.Users.GetMe;
 using AuthService.Api.Infrastructure.Persistence.Entities;
 using JetBrains.Annotations;

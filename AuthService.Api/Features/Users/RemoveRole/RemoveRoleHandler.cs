@@ -1,9 +1,8 @@
-﻿using AuthService.Api.Infrastructure.Persistence;
+using AuthService.Api.Features.Audit;
+using AuthService.Api.Infrastructure.Persistence;
 using AuthService.Api.Infrastructure.Persistence.Entities;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-
-using AuthService.Api.Features.Audit;
 
 namespace AuthService.Api.Features.Users.RemoveRole;
 

@@ -1,4 +1,4 @@
-﻿using AuthService.Api.Infrastructure.Persistence;
+using AuthService.Api.Infrastructure.Persistence;
 
 namespace AuthService.Api.Features.Audit;
 

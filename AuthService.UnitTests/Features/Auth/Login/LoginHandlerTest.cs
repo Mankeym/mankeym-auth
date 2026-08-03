@@ -1,4 +1,4 @@
-﻿using AuthService.Api.Features.Audit;
+using AuthService.Api.Features.Audit;
 using AuthService.Api.Features.Auth.Login;
 using AuthService.Api.Infrastructure.Persistence;
 using AuthService.Api.Infrastructure.Persistence.Entities;
@@ -13,7 +13,7 @@ using Moq;
 namespace AuthService.UnitTests.Features.Auth.Login;
 
 [TestSubject(typeof(LoginHandler))]
-public class LoginHandlerTest: IDisposable
+public class LoginHandlerTest : IDisposable
 {
     private readonly Mock<UserManager<ApplicationUser>> _userManagerMock;
     private readonly Mock<SignInManager<ApplicationUser>> _signInManagerMock;

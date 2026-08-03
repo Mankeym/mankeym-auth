@@ -1,6 +1,6 @@
+using AuthService.Api.Infrastructure.Observability;
 using AuthService.Api.Infrastructure.Persistence;
 using AuthService.Api.Infrastructure.Persistence.Entities;
-using AuthService.Api.Infrastructure.Observability;
 using Microsoft.EntityFrameworkCore;
 
 namespace AuthService.Api.Infrastructure.Outbox;
@@ -113,29 +113,29 @@ public sealed class OutboxProcessor(
 
             try
             {
-                    using var activity = AuthTelemetry.ActivitySource.StartActivity("outbox.deliver");
-                    activity?.SetTag("outbox.message_id", message.Id);
-                    activity?.SetTag("outbox.type", message.Type);
-                    await transport.DeliverAsync(
-                        new OutboxDelivery(message.Id, message.Type, message.Payload),
-                        cancellationToken);
-                    message.ProcessedAtUtc = DateTime.UtcNow;
-                    message.NextAttemptAtUtc = null;
-                    message.Error = null;
-                    message.LockId = null;
-                    message.LockedUntilUtc = null;
-                    AuthTelemetry.OutboxDeliveries.Add(1, new KeyValuePair<string, object?>("outbox.type", message.Type));
+                using var activity = AuthTelemetry.ActivitySource.StartActivity("outbox.deliver");
+                activity?.SetTag("outbox.message_id", message.Id);
+                activity?.SetTag("outbox.type", message.Type);
+                await transport.DeliverAsync(
+                    new OutboxDelivery(message.Id, message.Type, message.Payload),
+                    cancellationToken);
+                message.ProcessedAtUtc = DateTime.UtcNow;
+                message.NextAttemptAtUtc = null;
+                message.Error = null;
+                message.LockId = null;
+                message.LockedUntilUtc = null;
+                AuthTelemetry.OutboxDeliveries.Add(1, new KeyValuePair<string, object?>("outbox.type", message.Type));
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
-                    message.Error = "Delivery failed.";
-                    message.NextAttemptAtUtc = message.Attempts < MaxAttempts
-                        ? DateTime.UtcNow.Add(GetRetryDelay(message.Attempts))
-                        : null;
-                    message.LockId = null;
-                    message.LockedUntilUtc = null;
-                    logger.LogWarning(ex, "Outbox message {MessageId} delivery attempt {Attempt} failed.", message.Id, message.Attempts);
-                    AuthTelemetry.OutboxDeliveryFailures.Add(1, new KeyValuePair<string, object?>("outbox.type", message.Type));
+                message.Error = "Delivery failed.";
+                message.NextAttemptAtUtc = message.Attempts < MaxAttempts
+                    ? DateTime.UtcNow.Add(GetRetryDelay(message.Attempts))
+                    : null;
+                message.LockId = null;
+                message.LockedUntilUtc = null;
+                logger.LogWarning(ex, "Outbox message {MessageId} delivery attempt {Attempt} failed.", message.Id, message.Attempts);
+                AuthTelemetry.OutboxDeliveryFailures.Add(1, new KeyValuePair<string, object?>("outbox.type", message.Type));
             }
         }
 

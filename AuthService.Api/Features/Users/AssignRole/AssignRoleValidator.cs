@@ -1,9 +1,9 @@
-﻿using System.Security.Claims;
+using System.Security.Claims;
 using FluentValidation;
 
 namespace AuthService.Api.Features.Users.AssignRole;
 
-public class AssignRoleValidator: AbstractValidator<AssignRoleRequest>
+public class AssignRoleValidator : AbstractValidator<AssignRoleRequest>
 {
     public AssignRoleValidator(IHttpContextAccessor httpContextAccessor)
     {

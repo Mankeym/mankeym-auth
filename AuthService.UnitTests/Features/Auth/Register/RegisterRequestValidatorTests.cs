@@ -1,4 +1,4 @@
-﻿using AuthService.Api.Features.Auth.Register;
+using AuthService.Api.Features.Auth.Register;
 using FluentValidation.TestHelper;
 
 namespace AuthService.UnitTests.Features.Auth.Register;

@@ -1,4 +1,4 @@
-﻿using AuthService.Api.Common.Authorization;
+using AuthService.Api.Common.Authorization;
 using AuthService.Api.Infrastructure.Persistence;
 using AuthService.Api.Infrastructure.Persistence.Entities;
 using Microsoft.AspNetCore.Identity;

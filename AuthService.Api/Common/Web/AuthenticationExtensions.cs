@@ -1,4 +1,4 @@
-﻿using System.Security.Cryptography;
+using System.Security.Cryptography;
 using AuthService.Api.Common.Options;
 
 namespace AuthService.Api.Common.Web;

@@ -1,4 +1,4 @@
-﻿namespace AuthService.Api.Infrastructure.Security;
+namespace AuthService.Api.Infrastructure.Security;
 
 public interface IFrontendUrlProvider
 {

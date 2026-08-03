@@ -1,4 +1,4 @@
-﻿using System.Security.Claims;
+using System.Security.Claims;
 using AuthService.Api.Common.Authorization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -8,7 +8,7 @@ namespace AuthService.Api.Features.Users.AssignRole;
 [ApiController]
 [Route("api/v1/users/{id}/roles")]
 [Authorize(Policy = Permissions.UsersManage)]
-public class AssignRoleEndPoint(IAssignRoleHandler handler): ControllerBase
+public class AssignRoleEndPoint(IAssignRoleHandler handler) : ControllerBase
 {
     [HttpPost]
     public async Task<IActionResult> Post([FromRoute] string id, [FromBody] string roleName)

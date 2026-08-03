@@ -1,4 +1,4 @@
-﻿using AuthService.Api.Features.Roles.GetAllRoles;
+using AuthService.Api.Features.Roles.GetAllRoles;
 using AuthService.Api.Infrastructure.Persistence.Entities;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -14,7 +14,7 @@ public record GetRolesPermissionsResponse(bool Success, List<PermissionDto>? Per
 
 public record GetRolesPermissionsRequest(string roleName);
 
-public class GetRolesPermissionsHandler(RoleManager<ApplicationRole> roleManager): IGetRolesPermissionsHandler
+public class GetRolesPermissionsHandler(RoleManager<ApplicationRole> roleManager) : IGetRolesPermissionsHandler
 {
     public async Task<GetRolesPermissionsResponse> GetRolesPermissionsAsync(GetRolesPermissionsRequest request)
     {

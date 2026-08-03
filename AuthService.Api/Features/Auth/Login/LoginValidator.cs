@@ -1,8 +1,8 @@
-﻿using FluentValidation;
+using FluentValidation;
 
 namespace AuthService.Api.Features.Auth.Login;
 
-public class LoginValidator :  AbstractValidator<LoginRequest>
+public class LoginValidator : AbstractValidator<LoginRequest>
 {
     public LoginValidator()
     {

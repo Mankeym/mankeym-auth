@@ -1,4 +1,4 @@
-﻿namespace AuthService.Api.Infrastructure.Persistence.Entities;
+namespace AuthService.Api.Infrastructure.Persistence.Entities;
 
 public class Permission
 {
