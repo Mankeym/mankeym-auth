@@ -2,8 +2,6 @@
 
 Auth Service solves the common problem of giving an application a secure, observable authentication boundary with sessions, permissions, and recoverable email delivery.
 
-> This is a learning/demo project. Do not use real passwords, OAuth credentials, SMTP credentials, signing keys, or production user data in the local stack.
-
 ## Capabilities
 
 Implemented:
