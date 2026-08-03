@@ -9,6 +9,7 @@ public interface IRegisterHandler
 {
     Task<RegistrationResult> CreateUser(string email, string password);
 }
+
 public record RegistrationResult
 {
     public bool Success { get; set; }
@@ -35,6 +36,12 @@ public class RegisterHandler(
 
         if (!result.Succeeded)
         {
+            await auditLogger.LogAsync(
+                eventType: "UserRegistered",
+                outcome: "Failed",
+                eventData: new { email, Errors = result.Errors.Select(e => e.Description) }
+            );
+
             return new RegistrationResult
             {
                 Success = false,
@@ -45,7 +52,11 @@ public class RegisterHandler(
 
         UserRegisteredAuditEvent userEvent = new UserRegisteredAuditEvent { UserId = user.Id, Email = user.Email };
 
-        await auditLogger.LogAsync("UserRegistered", userEvent);
+        await auditLogger.LogAsync(
+            eventType: "UserRegistered",
+            outcome: "Success",
+            eventData: userEvent
+        );
         return new RegistrationResult
         {
             Success = true,

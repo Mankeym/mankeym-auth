@@ -7,6 +7,7 @@ using FluentAssertions;
 using System.Net;
 using AuthService.Api;
 using AuthService.Api.Infrastructure.Persistence;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace AuthService.IntegrationTests.Smoke;
 
@@ -20,22 +21,18 @@ public class SmokeTests : IClassFixture<WebApplicationFactory<Program>>
         {
             builder.ConfigureServices(services =>
             {
-                // 1. Заменяем реальный DbContext на InMemory
-                var dbDescriptor = services.SingleOrDefault(
-                    d => d.ServiceType == typeof(DbContextOptions<AppDbContext>));
-                if (dbDescriptor != null)
-                    services.Remove(dbDescriptor);
+                services.RemoveAll(typeof(DbContextOptions<AppDbContext>));
+                services.RemoveAll(typeof(IDbContextFactory<AppDbContext>));
+                services.RemoveAll(typeof(AppDbContext));
 
-                services.AddDbContext<AppDbContext>(options =>
+                services.AddDbContextFactory<AppDbContext>(options =>
                     options.UseInMemoryDatabase("TestDb"));
 
-                // 2. Очищаем все существующие регистрации HealthChecks через опции
                 services.Configure<HealthCheckServiceOptions>(options =>
                 {
                     options.Registrations.Clear();
                 });
 
-                // 3. Добавляем одну проверку с уникальным именем
                 services.AddHealthChecks()
                     .AddCheck("test_core", () => HealthCheckResult.Healthy(), tags: new[] { "live", "ready" });
             });

@@ -12,11 +12,13 @@
 
     <ItemGroup>
         <PackageReference Include="AspNetCore.HealthChecks.NpgSql" Version="9.0.0" />
+        <PackageReference Include="BouncyCastle.Cryptography" Version="2.6.2" />
         <PackageReference Include="DotNetEnv" Version="3.2.0" />
         <PackageReference Include="FluentValidation" Version="12.1.1" />
         <PackageReference Include="FluentValidation.AspNetCore" Version="11.3.1" />
         <PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="12.1.1" />
         <PackageReference Include="MediatR" Version="14.2.0" />
+        <PackageReference Include="Microsoft.AspNetCore.Authentication.Google" Version="9.0.0" />
         <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="9.0.0" />
         <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="9.0.0" />
         <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="9.0.0" />
@@ -26,16 +28,13 @@
           <PrivateAssets>all</PrivateAssets>
         </PackageReference>
         <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="9.0.0" />
+        <PackageReference Include="Scalar.AspNetCore" Version="2.16.17" />
         <PackageReference Include="Serilog.AspNetCore" Version="9.0.0" />
-        <PackageReference Include="Swashbuckle.AspNetCore" Version="7.0.0" />
+        <PackageReference Include="xunit.assert" Version="2.9.3" />
     </ItemGroup>
 
     <ItemGroup>
-      <Folder Include="Common\Authorization\" />
       <Folder Include="Common\Errors\" />
-      <Folder Include="Features\Roles\Create\" />
-      <Folder Include="Features\Sessions\" />
-      <Folder Include="Features\Users\" />
       <Folder Include="Infrastructure\Identity\" />
       <Folder Include="Infrastructure\Messaging\" />
       <Folder Include="Infrastructure\OAuth\" />

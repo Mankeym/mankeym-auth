@@ -1,4 +1,5 @@
-﻿using AuthService.Api.Infrastructure.Persistence;
+﻿using AuthService.Api.Common.Authorization;
+using AuthService.Api.Infrastructure.Persistence;
 using AuthService.Api.Infrastructure.Persistence.Entities;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -12,41 +13,32 @@ public static class DbInitializer
     {
         var context = services.GetRequiredService<AppDbContext>();
         var roleManager = services.GetRequiredService<RoleManager<ApplicationRole>>();
-        // ДОБАВЛЕНО: Достаем UserManager и IConfiguration
         var userManager = services.GetRequiredService<UserManager<ApplicationUser>>();
         var configuration = services.GetRequiredService<IConfiguration>();
         var logger = services.GetRequiredService<ILogger<Program>>();
 
         try
         {
-            // === 1. Создаём базовые разрешения ===
-            var permissionsToSeed = new List<Permission>
-            {
-                new() { Code = "profile:read", Description = "View own profile" },
-                new() { Code = "profile:update", Description = "Update own profile" },
-                new() { Code = "profile:delete", Description = "Delete own profile" },
-                new() { Code = "reports:view", Description = "View reports" },
-                new() { Code = "reports:create", Description = "Create reports" },
-                new() { Code = "users:manage", Description = "Manage users" },
-                new() { Code = "audit:view", Description = "View audit logs" }
-            };
+            var codePermissions = Permissions.GetAll();
 
-            foreach (var perm in permissionsToSeed)
+            foreach (var code in codePermissions)
             {
-                if (!await context.Permissions.AnyAsync(p => p.Code == perm.Code))
+                if (!await context.Permissions.AnyAsync(p => p.Code == code))
                 {
-                    context.Permissions.Add(perm);
+                    context.Permissions.Add(new Permission
+                    {
+                        Code = code,
+                        Description = $"Allows to {code.Replace(':', ' ').Replace('.', ' ')}"
+                    });
                 }
             }
             await context.SaveChangesAsync();
 
             var allDbPermissions = await context.Permissions.ToListAsync();
-
-            // === 2. Определяем и создаем роли ===
             var rolePermissions = new Dictionary<string, List<string>>
             {
                 ["User"] = new List<string> { "profile:read", "profile:update" },
-                ["Moderator"] = new List<string> { "profile:read", "profile:update", "reports:view" },
+                ["Moderator"] = new List<string> { "profile:read", "profile:update", "reports:view", "audit:view" },
                 ["Admin"] = new List<string> { "profile:*", "reports:*", "users:manage", "audit:view" }
             };
 
@@ -99,14 +91,11 @@ public static class DbInitializer
             logger.LogInformation("Roles and permissions successfully seeded.");
 
 
-            // === 3. ДОБАВЛЕНО: Создаем Суперюзера (Админа) ===
 
-            // Читаем данные из .env / переменных окружения
             var adminEmail = configuration["ADMIN_EMAIL"];
             var adminPassword = configuration["ADMIN_PASSWORD"];
             var adminRole = configuration["ADMIN_ROLE"] ?? "Admin";
 
-            // Если email и пароль заданы в конфиге, пытаемся создать
             if (!string.IsNullOrEmpty(adminEmail) && !string.IsNullOrEmpty(adminPassword))
             {
                 // Ищем пользователя по Email

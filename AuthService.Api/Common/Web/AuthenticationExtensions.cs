@@ -30,6 +30,7 @@ public static class AuthenticationExtensions
         {
             options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
             options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+            options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
         })
         .AddJwtBearer(options =>
         {
@@ -62,6 +63,16 @@ public static class AuthenticationExtensions
                     return Task.CompletedTask;
                 },
             };
+        })
+        .AddGoogle(googleOptions =>
+        {
+            var googleAuthNSection = configuration.GetSection("Authentication:Google");
+            googleOptions.ClientId = googleAuthNSection["ClientId"]!;
+            googleOptions.ClientSecret = googleAuthNSection["ClientSecret"]!;
+
+            googleOptions.SaveTokens = false;
+
+            googleOptions.SignInScheme = Microsoft.AspNetCore.Identity.IdentityConstants.ExternalScheme;
         });
 
         services.AddScoped<IJwtProvider, JwtProvider>();

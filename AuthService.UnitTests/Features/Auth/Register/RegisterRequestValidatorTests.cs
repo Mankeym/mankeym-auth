@@ -1,7 +1,7 @@
 ﻿using AuthService.Api.Features.Auth.Register;
 using FluentValidation.TestHelper;
 
-namespace AuthService.UnitTests.Features.Auth;
+namespace AuthService.UnitTests.Features.Auth.Register;
 
 public class RegisterRequestValidatorTests
 {

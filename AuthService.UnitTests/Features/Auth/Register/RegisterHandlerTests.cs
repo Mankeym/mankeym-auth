@@ -5,7 +5,7 @@ using FluentAssertions;
 using Microsoft.AspNetCore.Identity;
 using Moq;
 
-namespace AuthService.UnitTests.Features.Auth;
+namespace AuthService.UnitTests.Features.Auth.Register;
 
 public class RegisterHandlerTests
 {
@@ -18,8 +18,8 @@ public class RegisterHandlerTests
         // Настраиваем "заглушку" для UserManager (ему нужен IUserStore в конструкторе)
         var storeMock = new Mock<IUserStore<ApplicationUser>>();
         _userManagerMock = new Mock<UserManager<ApplicationUser>>(
-            storeMock.Object, null, null, null, null, null, null, null, null);
-
+            storeMock.Object, null!, null!, null!, null!, null!, null!, null!, null!);
+        _loggerMock = new Mock<IAuditLogger>();
         // Передаем нашу заглушку в реальный хендлер
         _handler = new RegisterHandler(_userManagerMock.Object, _loggerMock.Object);
     }

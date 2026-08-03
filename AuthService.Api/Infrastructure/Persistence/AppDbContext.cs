@@ -15,5 +15,9 @@ public class AppDbContext: IdentityDbContext<ApplicationUser, ApplicationRole, G
     {
     }
 
-    public DbSet<Permission> Permissions { get; set; }
+    public virtual DbSet<Permission> Permissions { get; set; }
+    public virtual DbSet<RefreshToken> RefreshTokens { get; set; }
+    public virtual DbSet<OutboxMessage> OutboxMessages { get; set; }
+    public virtual DbSet<UserSession> UserSessions { get; set; }
+    public virtual DbSet<AuditEvent> AuditEvents { get; set; }
 }

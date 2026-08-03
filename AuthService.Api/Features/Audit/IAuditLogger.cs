@@ -2,5 +2,5 @@
 
 public interface IAuditLogger
 {
-    Task LogAsync<T>(string eventName, T eventData);
+    Task LogAsync<T>(string eventType, string outcome, T eventData, CancellationToken cancellationToken = default);
 }

@@ -57,3 +57,15 @@ migrate-add:
 # Применить миграции к базе данных
 migrate-update:
 	dotnet ef database update --project $(API_PROJ)
+
+.PHONY: semgrep
+semgrep:
+	semgrep scan --config auto --error
+
+.PHONY: semgrep
+semgrep-ci:
+	semgrep scan --config auto --error --ci
+
+.PHONY: semgrep
+semgrep-wasp-top-ten:
+	semgrep scan --config p/owasp-top-ten --error

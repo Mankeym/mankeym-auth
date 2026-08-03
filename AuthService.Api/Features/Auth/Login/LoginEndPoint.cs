@@ -2,6 +2,10 @@
 
 namespace AuthService.Api.Features.Auth.Login;
 
+public class LoginResultDTO
+{
+    public string AccessToken { get; set; } = string.Empty;
+}
 
 [ApiController]
 [Route("api/v1/auth/login")]
@@ -16,6 +20,18 @@ public class LoginEndPoint(ILoginHandler loginHandler) : ControllerBase
             return BadRequest(new { Error = result.ErrorMessage });
         }
 
-        return Ok(result);
+        LoginResultDTO loginResult = new LoginResultDTO { AccessToken = result.AccessToken };
+
+        var cookieOptions = new CookieOptions
+        {
+            HttpOnly = true,
+            Secure = true,
+            SameSite = SameSiteMode.Strict,
+            Expires = DateTime.UtcNow.AddDays(7),
+            IsEssential = true
+        };
+
+        Response.Cookies.Append("refreshToken", result.RefreshToken, cookieOptions);
+        return Ok(loginResult);
     }
 }
