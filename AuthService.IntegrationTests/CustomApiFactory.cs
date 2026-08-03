@@ -50,6 +50,10 @@ public class CustomApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
+        builder.UseSetting("ConnectionStrings:DB_CONNECTION", _dbContainer.GetConnectionString());
+        builder.UseSetting("Redis:Configuration", _redisContainer.GetConnectionString());
+        builder.UseSetting("Database:ApplyMigrations", "false");
+
         builder.ConfigureTestServices(services =>
         {
             var descriptors = services.Where(d =>
