@@ -70,4 +70,4 @@ The response also includes `Set-Cookie: refreshToken=...`; clients must use cred
 | GET | `/health/ready` | PostgreSQL and Redis readiness. |
 | GET | `/metrics` | Prometheus metrics endpoint. |
 
-For ready-to-send local examples, use [AuthService.http](../examples/AuthService.http). Use placeholders only; never commit tokens, passwords, email links, or OAuth credentials.
+For ready-to-send local examples, use [AuthService.http](../examples/AuthService.http) or import the [Postman collection](../examples/AuthService.postman_collection.json). Use placeholders only; never commit tokens, passwords, email links, or OAuth credentials.

@@ -115,7 +115,7 @@ dotnet ef database update --project AuthService.Api/AuthService.Api.csproj --sta
 3. Reuse of a rotated refresh token revokes its session family and emits audit/metric signals.
 4. OAuth redirects never put access or refresh tokens in the URL; the SPA calls `/api/v1/auth/refresh` after the redirect.
 
-Use only placeholders from [sample HTTP requests](examples/AuthService.http). The file contains no credentials or real tokens.
+Use only placeholders from [sample HTTP requests](examples/AuthService.http) or import the [Postman collection](examples/AuthService.postman_collection.json). They contain no credentials or real tokens.
 
 See the versioned [API reference](docs/API.md) for endpoint permissions, request conventions, and response behavior.
 
