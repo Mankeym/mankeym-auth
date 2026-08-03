@@ -2,7 +2,9 @@
 using AuthService.Api.Features.Audit;
 using AuthService.Api.Infrastructure.Persistence;
 using AuthService.Api.Infrastructure.Persistence.Entities;
+using AuthService.Api.Infrastructure.Security;
 using AuthService.Api.Infrastructure.Tokens;
+using AuthService.Api.Infrastructure.Observability;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
@@ -16,9 +18,9 @@ public interface ILoginHandler
 public record LoginResult
 {
     public bool Success { get; set; }
-    public string AccessToken { get; set; }
-    public string RefreshToken { get; set; }
-    public string ErrorMessage { get; set; }
+    public string AccessToken { get; set; } = string.Empty;
+    public string RefreshToken { get; set; } = string.Empty;
+    public string ErrorMessage { get; set; } = string.Empty;
 }
 
 public class LoginHandler(
@@ -27,7 +29,8 @@ public class LoginHandler(
     AppDbContext dbContext,
     IAuditLogger auditLogger,
     IJwtProvider jwtProvider,
-    IHttpContextAccessor httpContextAccessor)
+    IHttpContextAccessor httpContextAccessor,
+    IPermissionRepository permissionRepository)
     : ILoginHandler
 {
 
@@ -37,6 +40,7 @@ public class LoginHandler(
         var user = await userManager.FindByEmailAsync(email);
         if (user == null)
         {
+            AuthTelemetry.LoginOutcomes.Add(1, new KeyValuePair<string, object?>("outcome", "invalid_credentials"));
             return InvalidLoginResult();
         }
 
@@ -44,27 +48,34 @@ public class LoginHandler(
 
         if (result.Succeeded)
         {
+            AuthTelemetry.LoginOutcomes.Add(1, new KeyValuePair<string, object?>("outcome", "success"));
             return await ProcessSuccessfulLoginAsync(user);
         }
 
         if (result.IsLockedOut)
         {
+            AuthTelemetry.LoginOutcomes.Add(1, new KeyValuePair<string, object?>("outcome", "locked_out"));
             return await ProcessFailedLoginAsync(user, "AccountLocked", "IsLockedOut",
                 "Account is locked out due to multiple failed login attempts. Please try again later.");
         }
 
         if (result.IsNotAllowed)
         {
+            AuthTelemetry.LoginOutcomes.Add(1, new KeyValuePair<string, object?>("outcome", "not_allowed"));
             return await ProcessFailedLoginAsync(user, "LoginFailed", "Failed",
                 "Login is not allowed. Please confirm your email address.");
         }
 
+        AuthTelemetry.LoginOutcomes.Add(1, new KeyValuePair<string, object?>("outcome", "invalid_credentials"));
         return InvalidLoginResult();
     }
     private async Task<LoginResult> ProcessSuccessfulLoginAsync(ApplicationUser user)
     {
         var roles = await userManager.GetRolesAsync(user);
-        string token = await jwtProvider.GenerateAccessToken(user.Id, user.Email!, roles);
+        var permissions = await permissionRepository.GetUserPermissionsAsync(user.Id);
+        var securityStamp = await userManager.GetSecurityStampAsync(user);
+        var email = user.Email ?? user.UserName ?? throw new InvalidOperationException("User email is missing.");
+        string token = await jwtProvider.GenerateAccessToken(user.Id, email, roles, permissions, securityStamp);
 
         await LogAuditAsync(user, "LoginSucceeded", "Success");
 
@@ -107,6 +118,7 @@ public class LoginHandler(
     private async Task<LoginResult> ProcessFailedLoginAsync(ApplicationUser user, string eventType, string outcome, string errorMessage)
     {
         await LogAuditAsync(user, eventType, outcome);
+        await dbContext.SaveChangesAsync();
 
         return new LoginResult
         {
@@ -136,7 +148,7 @@ public class LoginHandler(
         {
             Id = Guid.NewGuid(),
             UserId = userId,
-            DeviceName = "Unknown", // Или ParseDeviceName(userAgent)
+            DeviceName = DeviceNameResolver.Resolve(userAgent),
             UserAgentHash = TokenSecurityHelper.ComputeSha256Hash(userAgent),
             IpHash = TokenSecurityHelper.ComputeSha256Hash(ipAddress),
             CreatedAtUtc = utcNow,
@@ -151,16 +163,16 @@ public class LoginHandler(
     private (string UserAgent, string IpAddress) GetClientInfo()
     {
         var context = httpContextAccessor.HttpContext;
-        var userAgent = context?.Request.Headers.UserAgent.ToString() ?? "Unknown";
-        var ipAddress = context?.Connection.RemoteIpAddress?.ToString() ?? "Unknown";
+        var userAgent = context?.Request.Headers.UserAgent.ToString() ?? string.Empty;
+        var ipAddress = context?.Connection.RemoteIpAddress?.ToString() ?? string.Empty;
 
         return (userAgent, ipAddress);
     }
 
     private async Task LogAuditAsync(ApplicationUser user, string eventType, string outcome)
     {
-        var auditEvent = new UserLoggedInAuditEvent { UserId = user.Id, Email = user.Email };
-        await auditLogger.LogAsync(eventType, outcome, auditEvent);
+        var auditEvent = new UserLoggedInAuditEvent { UserId = user.Id, Email = user.Email ?? string.Empty };
+        await auditLogger.LogAsync(eventType, outcome, auditEvent, dbContext);
     }
 
     private static LoginResult InvalidLoginResult()

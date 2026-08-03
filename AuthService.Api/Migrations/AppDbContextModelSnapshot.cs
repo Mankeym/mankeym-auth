@@ -185,6 +185,9 @@ namespace AuthService.Api.Migrations
                     b.Property<string>("Error")
                         .HasColumnType("text");
 
+                    b.Property<DateTime?>("NextAttemptAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<DateTime>("OccurredAtUtc")
                         .HasColumnType("timestamp with time zone");
 
@@ -200,6 +203,10 @@ namespace AuthService.Api.Migrations
                         .HasColumnType("text");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("NextAttemptAtUtc", "OccurredAtUtc")
+                        .HasDatabaseName("IX_OutboxMessages_Unprocessed")
+                        .HasFilter("\"ProcessedAtUtc\" IS NULL");
 
                     b.ToTable("OutboxMessages");
                 });
@@ -252,6 +259,7 @@ namespace AuthService.Api.Migrations
                         .HasColumnType("text");
 
                     b.Property<DateTime?>("UsedAtUtc")
+                        .IsConcurrencyToken()
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<Guid>("UserId")

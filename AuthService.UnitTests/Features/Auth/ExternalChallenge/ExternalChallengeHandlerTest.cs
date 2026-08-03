@@ -1,12 +1,15 @@
 ﻿using AuthService.Api.Features.Audit;
 using AuthService.Api.Features.Auth.ExternalChallenge;
 using AuthService.Api.Infrastructure.Persistence.Entities;
+using AuthService.Api.Infrastructure.Persistence;
+using AuthService.Api.Infrastructure.Tokens;
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.EntityFrameworkCore;
 using Moq;
 
 namespace AuthService.UnitTests.Features.Auth.ExternalChallenge;
@@ -18,6 +21,7 @@ public class ExternalChallengeHandlerTests
     private readonly Mock<LinkGenerator> _linkGeneratorMock;
     private readonly Mock<IHttpContextAccessor> _contextAccessorMock;
     private readonly Mock<IAuditLogger> _auditLoggerMock;
+    private readonly AppDbContext _dbContext;
     private readonly ExternalChallengeHandler _handler;
 
     public ExternalChallengeHandlerTests()
@@ -37,6 +41,9 @@ public class ExternalChallengeHandlerTests
 
         _linkGeneratorMock = new Mock<LinkGenerator>();
         _auditLoggerMock = new Mock<IAuditLogger>();
+        _dbContext = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .Options);
 
         var httpContext = new DefaultHttpContext();
         httpContext.Request.Headers.UserAgent = "Test-Agent";
@@ -46,6 +53,7 @@ public class ExternalChallengeHandlerTests
             _signInManagerMock.Object,
             _linkGeneratorMock.Object,
             _auditLoggerMock.Object,
+            _dbContext,
             _contextAccessorMock.Object
         );
     }
@@ -56,17 +64,6 @@ public class ExternalChallengeHandlerTests
         // Arrange
         string provider = "Google";
         string returnUrl = "/dashboard";
-
-        _linkGeneratorMock
-            .Setup(l => l.GetPathByAction(
-                It.IsAny<HttpContext?>(),
-                It.IsAny<string?>(),
-                It.IsAny<string?>(),
-                It.IsAny<object?>(),
-                It.IsAny<PathString?>(),
-                It.IsAny<FragmentString>(),
-                It.IsAny<LinkOptions?>()))
-            .Returns("/api/v1/auth/external/google/callback");
 
         _signInManagerMock
             .Setup(s => s.ConfigureExternalAuthenticationProperties(provider, It.IsAny<string>(), It.IsAny<string?>()))
@@ -86,7 +83,7 @@ public class ExternalChallengeHandlerTests
                 "ExternalAuth",
                 "Challenge_Initiated",
                 It.Is<object>(o => o.ToString()!.Contains(provider)),
-                default),
+                _dbContext),
             Times.Once);
     }
 }

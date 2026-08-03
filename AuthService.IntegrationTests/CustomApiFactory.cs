@@ -8,24 +8,30 @@ using Microsoft.AspNetCore.TestHost;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
+using StackExchange.Redis;
 using Testcontainers.PostgreSql;
+using Testcontainers.Redis;
 using Xunit;
 
 namespace AuthService.IntegrationTests;
 
 public class CustomApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
 {
-    private readonly PostgreSqlContainer _dbContainer = new PostgreSqlBuilder()
-        .WithImage("postgres:15-alpine")
+    private readonly PostgreSqlContainer _dbContainer = new PostgreSqlBuilder("postgres:15-alpine")
         .WithDatabase("authdb_test")
         .WithUsername("postgres")
         .WithPassword("postgres")
         .Build();
 
+    private readonly RedisContainer _redisContainer = new RedisBuilder("redis:7.4-alpine")
+        .Build();
+
     public async Task InitializeAsync()
     {
         await _dbContainer.StartAsync();
+        await _redisContainer.StartAsync();
 
         var optionsBuilder = new DbContextOptionsBuilder<AppDbContext>();
         optionsBuilder.UseNpgsql(_dbContainer.GetConnectionString());
@@ -36,6 +42,8 @@ public class CustomApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
 
     public new async Task DisposeAsync()
     {
+        await _redisContainer.StopAsync();
+        await _redisContainer.DisposeAsync();
         await _dbContainer.StopAsync();
         await _dbContainer.DisposeAsync();
     }
@@ -59,6 +67,10 @@ public class CustomApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
             services.AddDbContextFactory<AppDbContext>(options =>
                 options.UseNpgsql(_dbContainer.GetConnectionString()));
 
+            services.RemoveAll<IConnectionMultiplexer>();
+            services.AddSingleton<IConnectionMultiplexer>(_ =>
+                ConnectionMultiplexer.Connect(_redisContainer.GetConnectionString()));
+
             services.Configure<HealthCheckServiceOptions>(options =>
             {
                 options.Registrations.Clear();
@@ -66,7 +78,6 @@ public class CustomApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
         });
     }
 
-    // Убрали ключевое слово 'this', так как метод внутри класса
     public async Task<ApplicationUser> CreateConfirmedUserAsync(string email, string password)
     {
         using var scope = Services.CreateScope();
@@ -83,12 +94,22 @@ public class CustomApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
         return user;
     }
 
-    // Сделали методом экземпляра для удобного вызова через _factory
     public async Task<bool> HasOutboxMessageOfTypeAsync(string type)
     {
         using var scope = Services.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         return await dbContext.OutboxMessages.AnyAsync(m => m.Type == type);
+    }
+
+    public async Task<OutboxMessage?> GetLatestOutboxMessageAsync(string type)
+    {
+        using var scope = Services.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        return await dbContext.OutboxMessages
+            .AsNoTracking()
+            .Where(m => m.Type == type)
+            .OrderByDescending(m => m.OccurredAtUtc)
+            .FirstOrDefaultAsync();
     }
 
     public async Task<(Guid UserId, string EncodedToken)> CreateUserAndGenerateResetTokenAsync(string email = null!, string password = "StrongPassword123!")

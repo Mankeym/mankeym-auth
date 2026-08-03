@@ -15,6 +15,7 @@ public class RefreshHandlerTest : IDisposable
     private readonly Mock<IJwtProvider> _jwtProviderMock;
     private readonly Mock<IAuditLogger> _auditLoggerMock;
     private readonly Mock<UserManager<ApplicationUser>> _userManagerMock;
+    private readonly Mock<IPermissionRepository> _permissionRepositoryMock;
 
     private readonly RefreshHandler _handler;
 
@@ -28,6 +29,7 @@ public class RefreshHandlerTest : IDisposable
 
         _jwtProviderMock = new Mock<IJwtProvider>();
         _auditLoggerMock = new Mock<IAuditLogger>();
+        _permissionRepositoryMock = new Mock<IPermissionRepository>();
 
         var userStoreMock = new Mock<IUserStore<ApplicationUser>>();
         _userManagerMock = new Mock<UserManager<ApplicationUser>>(
@@ -37,7 +39,8 @@ public class RefreshHandlerTest : IDisposable
             _dbContext,
             _jwtProviderMock.Object,
             _auditLoggerMock.Object,
-            _userManagerMock.Object);
+            _userManagerMock.Object,
+            _permissionRepositoryMock.Object);
     }
 
     public void Dispose()
@@ -164,7 +167,7 @@ public class RefreshHandlerTest : IDisposable
         var roles = new List<string> { "User" };
         _userManagerMock.Setup(x => x.GetRolesAsync(user)).ReturnsAsync(roles);
 
-        _jwtProviderMock.Setup(x => x.GenerateAccessToken(user.Id, user.Email, roles))
+        _jwtProviderMock.Setup(x => x.GenerateAccessToken(user.Id, user.Email, roles, It.IsAny<IEnumerable<string>>(), It.IsAny<string>()))
             .ReturnsAsync(expectedAccessToken);
 
         // Act

@@ -1,4 +1,6 @@
-﻿namespace AuthService.Api.Infrastructure.Persistence.Entities;
+﻿using Microsoft.EntityFrameworkCore;
+
+namespace AuthService.Api.Infrastructure.Persistence.Entities;
 
 public class OutboxMessage
 {
@@ -7,6 +9,7 @@ public class OutboxMessage
     public string Payload { get; set; } = string.Empty;
     public DateTime OccurredAtUtc { get; set; }
     public DateTime? ProcessedAtUtc { get; set; }
+    public DateTime? NextAttemptAtUtc { get; set; }
     public int Attempts { get; set; }
     public string? Error { get; set; }
 }

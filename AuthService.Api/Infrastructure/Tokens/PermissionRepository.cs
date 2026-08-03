@@ -1,24 +1,31 @@
-﻿namespace AuthService.Api.Infrastructure.Tokens;
+﻿using AuthService.Api.Common.Authorization;
+using AuthService.Api.Infrastructure.Persistence;
+using AuthService.Api.Infrastructure.Persistence.Entities;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
+
+namespace AuthService.Api.Infrastructure.Tokens;
 
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
-public class PermissionRepository : IPermissionRepository
+public class PermissionRepository(AppDbContext dbContext) : IPermissionRepository
 {
-    public Task<List<string>> GetUserPermissionsAsync(Guid userId)
+    public async Task<List<string>> GetUserPermissionsAsync(Guid userId)
     {
-        // TODO: Здесь должен быть запрос к базе данных (EF Core или Dapper).
-        // Например: return await _dbContext.UserPermissions.Where(x => x.UserId == userId).Select(x => x.PermissionName).ToListAsync();
-        
-        // Пока возвращаем тестовые права для успешной компиляции и проверки:
-        var dummyPermissions = new List<string>
-        {
-            "users:read",
-            "users:write",
-            "reports:generate"
-        };
+        var roleIds = dbContext.UserRoles
+            .Where(ur => ur.UserId == userId)
+            .Select(ur => ur.RoleId);
 
-        return Task.FromResult(dummyPermissions);
+        var permissions = await dbContext.Roles
+            .Where(role => roleIds.Contains(role.Id))
+            .SelectMany(role => role.Permissions)
+            .Select(permission => permission.Code)
+            .Distinct()
+            .ToListAsync();
+
+
+        return permissions;
     }
 }

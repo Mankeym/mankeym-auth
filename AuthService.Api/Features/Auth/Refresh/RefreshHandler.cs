@@ -3,6 +3,7 @@ using AuthService.Api.Features.Audit;
 using AuthService.Api.Infrastructure.Persistence;
 using AuthService.Api.Infrastructure.Persistence.Entities;
 using AuthService.Api.Infrastructure.Tokens;
+using AuthService.Api.Infrastructure.Observability;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
@@ -25,7 +26,8 @@ public class RefreshHandler(
     AppDbContext dbContext,
     IJwtProvider jwtProvider,
     IAuditLogger auditLogger,
-    UserManager<ApplicationUser> userManager) : IRefreshHandler
+    UserManager<ApplicationUser> userManager,
+    IPermissionRepository permissionRepository) : IRefreshHandler
 {
     public async Task<RefreshResult> RefreshTokensAsync(string rawRequestToken)
     {
@@ -100,10 +102,14 @@ public class RefreshHandler(
         await dbContext.SaveChangesAsync();
 
         var roles = await userManager.GetRolesAsync(existingToken.User);
+        var permissions = await permissionRepository.GetUserPermissionsAsync(existingToken.User.Id);
+        var securityStamp = await userManager.GetSecurityStampAsync(existingToken.User);
         var newAccessToken = await jwtProvider.GenerateAccessToken(
             existingToken.User.Id,
             existingToken.User.Email!,
-            roles);
+            roles,
+            permissions,
+            securityStamp!);
 
         return new RefreshResult
         {
@@ -115,6 +121,7 @@ public class RefreshHandler(
 
     private async Task HandleTokenReuseAsync(RefreshToken existingToken)
     {
+        AuthTelemetry.RefreshTokenReuse.Add(1);
         var now = DateTime.UtcNow;
 
         await dbContext.UserSessions
@@ -128,7 +135,8 @@ public class RefreshHandler(
             .ExecuteUpdateAsync(s => s.SetProperty(t => t.RevokedAtUtc, now));
 
         await auditLogger.LogAsync("TokenReuseDetected", "Token reuse detected (Security Alert)",
-            new { existingToken.UserId, existingToken.SessionId });
+            new { existingToken.UserId, existingToken.SessionId }, dbContext);
+        await dbContext.SaveChangesAsync();
     }
 
     private static RefreshResult RefreshFailed(string error) =>

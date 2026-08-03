@@ -5,7 +5,7 @@ namespace AuthService.Api.Features.Sessions.GetMySessions;
 
 [Authorize]
 [ApiController]
-[Route("api/v1/sessions/me`")]
+[Route("api/v1/sessions/me")]
 public class GetMySessionsEndPoint(IGetMySessionsHandler getMySessionsHandler) : ControllerBase
 {
     [HttpGet]
@@ -13,7 +13,7 @@ public class GetMySessionsEndPoint(IGetMySessionsHandler getMySessionsHandler) :
     {
         var result = await getMySessionsHandler.GetMySessions(User);
 
-        if (result == null)
+        if (!result.Success)
         {
             return BadRequest(new { error = result.ErrorMessage });
         }

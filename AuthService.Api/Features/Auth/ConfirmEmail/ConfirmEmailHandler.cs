@@ -1,5 +1,6 @@
 ﻿using System.Text;
 using AuthService.Api.Features.Audit;
+using AuthService.Api.Infrastructure.Persistence;
 using AuthService.Api.Infrastructure.Persistence.Entities;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.WebUtilities;
@@ -14,6 +15,7 @@ public interface IConfirmEmailHandler
 public record ConfirmEmailResponse(string Message, bool Success);
 
 public class ConfirmEmailHandler(
+    AppDbContext dbContext,
     UserManager<ApplicationUser> userManager,
     IAuditLogger auditLogger)
     : IConfirmEmailHandler
@@ -47,11 +49,13 @@ public class ConfirmEmailHandler(
         if (!result.Succeeded)
         {
             var errors = string.Join(", ", result.Errors.Select(e => e.Description));
-            await auditLogger.LogAsync("EmailConfirmationFailed", errors, new { UserId = request.UserId });
+            await auditLogger.LogAsync("EmailConfirmationFailed", errors, new { UserId = request.UserId }, dbContext);
+            await dbContext.SaveChangesAsync();
             return new ConfirmEmailResponse("Invalid or expired email confirmation token.", false);
         }
 
-        await auditLogger.LogAsync("EmailConfirmed", "Success", new { UserId = request.UserId });
+        await auditLogger.LogAsync("EmailConfirmed", "Success", new { UserId = request.UserId }, dbContext);
+        await dbContext.SaveChangesAsync();
 
         return new ConfirmEmailResponse("Email successfully confirmed.", true);
     }

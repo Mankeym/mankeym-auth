@@ -1,8 +1,10 @@
 ﻿using AuthService.Api.Features.Audit;
 using AuthService.Api.Features.Auth.Register;
 using AuthService.Api.Infrastructure.Persistence.Entities;
+using AuthService.Api.Infrastructure.Persistence;
 using FluentAssertions;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using Moq;
 
 namespace AuthService.UnitTests.Features.Auth.Register;
@@ -11,6 +13,7 @@ public class RegisterHandlerTests
 {
     private readonly Mock<UserManager<ApplicationUser>> _userManagerMock;
     private readonly Mock<IAuditLogger> _loggerMock;
+    private readonly AppDbContext _dbContext;
     private readonly RegisterHandler _handler;
 
     public RegisterHandlerTests()
@@ -20,8 +23,11 @@ public class RegisterHandlerTests
         _userManagerMock = new Mock<UserManager<ApplicationUser>>(
             storeMock.Object, null!, null!, null!, null!, null!, null!, null!, null!);
         _loggerMock = new Mock<IAuditLogger>();
+        _dbContext = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .Options);
         // Передаем нашу заглушку в реальный хендлер
-        _handler = new RegisterHandler(_userManagerMock.Object, _loggerMock.Object);
+        _handler = new RegisterHandler(_userManagerMock.Object, _dbContext, _loggerMock.Object);
     }
 
     [Fact]

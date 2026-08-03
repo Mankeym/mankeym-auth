@@ -15,7 +15,7 @@ public interface IRevokeSessionHandler
 public class RevokeSessionResult
 {
     public bool Success { get; set; }
-    public string ErrorMessage { get; set; }
+    public string ErrorMessage { get; set; } = string.Empty;
 }
 
 public class RevokeSessionHandler(
@@ -64,9 +64,8 @@ public class RevokeSessionHandler(
             token.RevokedAtUtc = now;
         }
 
+        await auditLogger.LogAsync("SessionRevoked", "Success", new { UserId = userId, SessionId = sessionId }, dbContext);
         await dbContext.SaveChangesAsync();
-
-        await auditLogger.LogAsync("SessionRevoked", "Success", new { UserId = userId, SessionId = sessionId });
 
         return new RevokeSessionResult { Success = true };
     }

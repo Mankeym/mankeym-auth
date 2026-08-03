@@ -26,7 +26,7 @@ public static class AuthenticationExtensions
         var jwtOptions = configuration.GetSection(JwtOptions.SectionName).Get<JwtOptions>()
             ?? throw new InvalidOperationException($"Section {JwtOptions.SectionName} is missing from configuration");
 
-        services.AddAuthentication(options =>
+        var authentication = services.AddAuthentication(options =>
         {
             options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
             options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -63,17 +63,24 @@ public static class AuthenticationExtensions
                     return Task.CompletedTask;
                 },
             };
-        })
-        .AddGoogle(googleOptions =>
-        {
-            var googleAuthNSection = configuration.GetSection("Authentication:Google");
-            googleOptions.ClientId = googleAuthNSection["ClientId"]!;
-            googleOptions.ClientSecret = googleAuthNSection["ClientSecret"]!;
-
-            googleOptions.SaveTokens = false;
-
-            googleOptions.SignInScheme = Microsoft.AspNetCore.Identity.IdentityConstants.ExternalScheme;
         });
+
+        var googleAuthNSection = configuration.GetSection("Authentication:Google");
+        var googleClientId = googleAuthNSection["ClientId"];
+        var googleClientSecret = googleAuthNSection["ClientSecret"];
+
+        if (!string.IsNullOrWhiteSpace(googleClientId) && !string.IsNullOrWhiteSpace(googleClientSecret))
+        {
+            authentication.AddGoogle(googleOptions =>
+            {
+                googleOptions.ClientId = googleClientId;
+                googleOptions.ClientSecret = googleClientSecret;
+
+                googleOptions.SaveTokens = false;
+
+                googleOptions.SignInScheme = Microsoft.AspNetCore.Identity.IdentityConstants.ExternalScheme;
+            });
+        }
 
         services.AddScoped<IJwtProvider, JwtProvider>();
 

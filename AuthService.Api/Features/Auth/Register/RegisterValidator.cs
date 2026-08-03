@@ -2,19 +2,14 @@
 
 namespace AuthService.Api.Features.Auth.Register;
 
-/// <summary>
-///  Validator for RegisterRequest
-/// </summary>
 public class RegisterValidator : AbstractValidator<RegisterRequest>
 {
     public RegisterValidator()
     {
-        // 1. Проверка Email
         RuleFor(x => x.Email)
             .NotEmpty().WithMessage("Email is required.")
             .EmailAddress().WithMessage("Invalid email format.");
 
-        // 2. Проверка пароля
         RuleFor(x => x.Password)
             .NotEmpty().WithMessage("Password is required.")
             .MinimumLength(8).WithMessage("Password must be at least 8 characters long.")
@@ -25,7 +20,6 @@ public class RegisterValidator : AbstractValidator<RegisterRequest>
             .Must(NotBeACommonPassword).WithMessage("This password is too common and insecure.");
     }
 
-    // Ваш кастомный метод проверки на частые пароли
     private bool NotBeACommonPassword(string password)
     {
         if (string.IsNullOrEmpty(password)) return false;

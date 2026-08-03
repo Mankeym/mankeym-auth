@@ -8,18 +8,18 @@ namespace AuthService.Api.Features.Auth.Logout;
 
 public interface ILogoutHandler
 {
-    public Task<LogoutResult> LogoutAsync(string rawRequestToken);
+    public Task<LogoutResult> LogoutAsync(string? rawRequestToken);
 }
 
 public record LogoutResult
 {
     public bool Success { get; set; }
-    public string Error { get; set; }
+    public string Error { get; set; } = string.Empty;
 }
 
 public class LogoutHandler(AppDbContext dbContext, IAuditLogger auditLogger): ILogoutHandler
 {
-    public async Task<LogoutResult> LogoutAsync(string rawRequestToken)
+    public async Task<LogoutResult> LogoutAsync(string? rawRequestToken)
     {
         if (string.IsNullOrEmpty(rawRequestToken))
         {
@@ -51,8 +51,8 @@ public class LogoutHandler(AppDbContext dbContext, IAuditLogger auditLogger): IL
             t.RevokedAtUtc = now;
         }
 
+        await auditLogger.LogAsync("UserLogout", "Success", new { token.UserId, token.SessionId }, dbContext);
         await dbContext.SaveChangesAsync();
-        await auditLogger.LogAsync("UserLogout", "Success", new { token.UserId, token.SessionId });
 
         return new LogoutResult { Success = true };
     }

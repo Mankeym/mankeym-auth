@@ -1,5 +1,6 @@
 ﻿using AuthService.Api.Features.Audit;
 using AuthService.Api.Infrastructure.Persistence.Entities;
+using AuthService.Api.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.UI.Services;
 
@@ -14,11 +15,12 @@ public record RegistrationResult
 {
     public bool Success { get; set; }
     public Guid? UserId { get; set; }
-    public IEnumerable<string> Errors { get; set; }
+    public IEnumerable<string> Errors { get; set; } = Array.Empty<string>();
 }
 
 public class RegisterHandler(
     UserManager<ApplicationUser> userManager,
+    AppDbContext dbContext,
     IAuditLogger auditLogger)
     : IRegisterHandler
 {
@@ -39,8 +41,10 @@ public class RegisterHandler(
             await auditLogger.LogAsync(
                 eventType: "UserRegistered",
                 outcome: "Failed",
-                eventData: new { email, Errors = result.Errors.Select(e => e.Description) }
+                eventData: new { ErrorCodes = result.Errors.Select(e => e.Code) },
+                context: dbContext
             );
+            await dbContext.SaveChangesAsync();
 
             return new RegistrationResult
             {
@@ -50,13 +54,13 @@ public class RegisterHandler(
         }
         await userManager.AddToRoleAsync(user, "User");
 
-        UserRegisteredAuditEvent userEvent = new UserRegisteredAuditEvent { UserId = user.Id, Email = user.Email };
-
         await auditLogger.LogAsync(
             eventType: "UserRegistered",
             outcome: "Success",
-            eventData: userEvent
+            eventData: new { UserId = user.Id },
+            context: dbContext
         );
+        await dbContext.SaveChangesAsync();
         return new RegistrationResult
         {
             Success = true,

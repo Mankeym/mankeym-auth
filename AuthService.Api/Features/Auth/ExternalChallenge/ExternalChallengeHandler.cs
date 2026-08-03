@@ -1,5 +1,6 @@
 ﻿using AuthService.Api.Features.Audit;
 using AuthService.Api.Infrastructure.Persistence.Entities;
+using AuthService.Api.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Routing;
@@ -18,6 +19,7 @@ public class ExternalChallengeHandler(
     SignInManager<ApplicationUser> signInManager,
     LinkGenerator linkGenerator,
     IAuditLogger auditLogger,
+    AppDbContext dbContext,
     IHttpContextAccessor httpContextAccessor) : IExternalChallengeHandler
 {
     public async Task<IActionResult> Challenge(ExternalChallengeRequest request)
@@ -31,10 +33,10 @@ public class ExternalChallengeHandler(
             outcome: "Challenge_Initiated",
             eventData: new
             {
-                Provider = provider,
-                ReturnUrl = returnUrl,
-                UserAgent = httpContext.Request.Headers.UserAgent.ToString()
-            });
+                Provider = provider
+            },
+            context: dbContext);
+        await dbContext.SaveChangesAsync();
 
         var redirectUrl = linkGenerator.GetPathByAction(
             httpContext,

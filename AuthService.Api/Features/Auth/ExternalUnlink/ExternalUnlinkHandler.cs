@@ -1,5 +1,6 @@
 ﻿using AuthService.Api.Features.Audit;
 using AuthService.Api.Infrastructure.Persistence.Entities;
+using AuthService.Api.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 
@@ -12,7 +13,10 @@ public interface IExternalUnlinkHandler
     Task<IActionResult> UnlinkAsync(ExternalUnlinkRequest request);
 }
 
-public class ExternalUnlinkHandler(UserManager<ApplicationUser> userManager, IAuditLogger auditLogger) : IExternalUnlinkHandler
+public class ExternalUnlinkHandler(
+    UserManager<ApplicationUser> userManager,
+    IAuditLogger auditLogger,
+    AppDbContext dbContext) : IExternalUnlinkHandler
 {
     public async Task<IActionResult> UnlinkAsync(ExternalUnlinkRequest request)
     {
@@ -21,7 +25,8 @@ public class ExternalUnlinkHandler(UserManager<ApplicationUser> userManager, IAu
         var user = await userManager.FindByIdAsync(userId.ToString());
         if (user == null)
         {
-            await auditLogger.LogAsync("ExternalUnlink", "Failed_UserNotFound", new { UserId = userId, Provider = provider });
+            await auditLogger.LogAsync("ExternalUnlink", "Failed_UserNotFound", new { UserId = userId, Provider = provider }, dbContext);
+            await dbContext.SaveChangesAsync();
             return new UnauthorizedResult();
         }
 
@@ -32,7 +37,8 @@ public class ExternalUnlinkHandler(UserManager<ApplicationUser> userManager, IAu
 
         if (loginToRemove == null)
         {
-            await auditLogger.LogAsync("ExternalUnlink", "Failed_ProviderNotLinked", new { UserId = userId, Provider = provider });
+            await auditLogger.LogAsync("ExternalUnlink", "Failed_ProviderNotLinked", new { UserId = userId, Provider = provider }, dbContext);
+            await dbContext.SaveChangesAsync();
             return new BadRequestObjectResult(new { Error = "Провайдер не привязан к этому аккаунту." });
         }
 
@@ -46,7 +52,8 @@ public class ExternalUnlinkHandler(UserManager<ApplicationUser> userManager, IAu
                 Provider = provider,
                 HasPassword = hasPassword,
                 LinkedProvidersCount = logins.Count
-            });
+            }, dbContext);
+            await dbContext.SaveChangesAsync();
 
             return new BadRequestObjectResult(new
             {
@@ -64,10 +71,12 @@ public class ExternalUnlinkHandler(UserManager<ApplicationUser> userManager, IAu
                 UserId = userId,
                 Provider = provider,
                 Errors = result.Errors.Select(e => e.Code)
-            });
+            }, dbContext);
+            await dbContext.SaveChangesAsync();
             return new BadRequestObjectResult(new { Error = "Ошибка при отвязке провайдера." });
         }
-        await auditLogger.LogAsync("ExternalUnlink", "Success", new { UserId = userId, Provider = provider });
+        await auditLogger.LogAsync("ExternalUnlink", "Success", new { UserId = userId, Provider = provider }, dbContext);
+        await dbContext.SaveChangesAsync();
 
         return new OkResult();
     }

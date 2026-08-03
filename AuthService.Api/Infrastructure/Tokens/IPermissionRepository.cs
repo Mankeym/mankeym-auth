@@ -1,8 +1,6 @@
-﻿namespace AuthService.Api.Infrastructure.Tokens;
+﻿using AuthService.Api.Infrastructure.Persistence.Entities;
 
-using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
+namespace AuthService.Api.Infrastructure.Tokens;
 
 public interface IPermissionRepository
 {

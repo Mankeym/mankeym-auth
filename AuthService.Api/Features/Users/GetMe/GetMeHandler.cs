@@ -13,7 +13,7 @@ public interface IGetMeHandler
 
 public class UserDto
 {
-    public string Email { get; set; }
+    public string Email { get; set; } = string.Empty;
     public IList<string> Roles { get; set; } = [];
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
@@ -23,7 +23,7 @@ public class GetMeResult
 {
     public bool Success { get; set; }
     public  UserDto? User { get; set; }
-    public string ErrorMessage { get; set; }
+    public string ErrorMessage { get; set; } = string.Empty;
 }
 public class GetMeHandler(UserManager<ApplicationUser> userManager) : IGetMeHandler
 {

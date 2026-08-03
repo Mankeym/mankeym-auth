@@ -1,8 +1,10 @@
 using System.Reflection;
+using System.Security.Cryptography;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Threading.RateLimiting;
 using AuthService.Api.Common.Web;
+using AuthService.Api.Common.RateLimiting;
 using AuthService.Api.Features.Audit;
 using AuthService.Api.Features.Auth.ConfirmEmail;
 using AuthService.Api.Features.Auth.ExternalCallback;
@@ -27,27 +29,56 @@ using AuthService.Api.Features.Auth.Logout;
 using AuthService.Api.Features.Auth.Refresh;
 using AuthService.Api.Features.Auth.RequestEmailConfirmation;
 using AuthService.Api.Features.Auth.ResetPassword;
+using AuthService.Api.Features.Roles.GetAllRoles;
+using AuthService.Api.Features.Roles.GetRolesPermissions;
 using AuthService.Api.Features.Sessions.GetMySessions;
 using AuthService.Api.Features.Sessions.RevokeSession;
 using AuthService.Api.Features.Users.AssignRole;
 using AuthService.Api.Features.Users.GetMe;
+using AuthService.Api.Features.Users.RemoveRole;
 using AuthService.Api.Infrastructure.Authorization;
 using AuthService.Api.Infrastructure.BackgroundJobs;
 using AuthService.Api.Infrastructure.Email;
 using AuthService.Api.Infrastructure.Outbox;
 using AuthService.Api.Infrastructure.Security;
+using AuthService.Api.Infrastructure.RateLimiting;
 using AuthService.Api.Infrastructure.Tokens;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Mvc;
 using Scalar.AspNetCore;
+using StackExchange.Redis;
+using OpenTelemetry.Trace;
+using OpenTelemetry.Metrics;
+using Serilog;
+using AuthService.Api.Infrastructure.Observability;
 
 [assembly: InternalsVisibleTo("AuthService.IntegrationTests")]
+[assembly: InternalsVisibleTo("AuthService.UnitTests")]
 
 Env.Load();
 var builder = WebApplication.CreateBuilder(args);
+builder.Host.UseSerilog((context, _, loggerConfiguration) =>
+    loggerConfiguration.ReadFrom.Configuration(context.Configuration));
 
-// Добавление DbContext
+builder.Configuration.AddJsonFile(
+    "/run/secrets/authservice.user-secrets.json",
+    optional: true,
+    reloadOnChange: false);
+
+if (builder.Environment.IsDevelopment()
+    && string.IsNullOrWhiteSpace(builder.Configuration["JwtSettings:PrivateKey"])
+    && string.IsNullOrWhiteSpace(builder.Configuration["JwtSettings:PublicKey"]))
+{
+    using var rsa = RSA.Create(2048);
+    builder.Configuration.AddInMemoryCollection(new Dictionary<string, string?>
+    {
+        ["JwtSettings:PrivateKey"] = rsa.ExportRSAPrivateKeyPem(),
+        ["JwtSettings:PublicKey"] = rsa.ExportRSAPublicKeyPem()
+    });
+}
+
+
 builder.Configuration.AddEnvironmentVariables();
 var connectionString = builder.Configuration.GetConnectionString("DB_CONNECTION")
                        ?? builder.Configuration["DB_CONNECTION"];
@@ -61,10 +92,37 @@ builder.Services.AddMediatR(cfg =>
     cfg.RegisterServicesFromAssembly(Assembly.GetExecutingAssembly()));
 
 builder.Services.AddDbContextFactory<AppDbContext>(options =>
-    options.UseNpgsql(connectionString));
+    options.UseNpgsql(connectionString)
+        .AddInterceptors(new DbMetricsInterceptor()));
+
+var redisConnectionString = builder.Configuration.GetConnectionString("Redis")
+                            ?? builder.Configuration["Redis:Configuration"];
+
+if (string.IsNullOrWhiteSpace(redisConnectionString))
+{
+    throw new InvalidOperationException("Redis connection string is not configured.");
+}
+
+builder.Services.AddSingleton<IConnectionMultiplexer>(_ =>
+    ConnectionMultiplexer.Connect(redisConnectionString));
+builder.Services.AddStackExchangeRedisCache(options => options.Configuration = redisConnectionString);
+builder.Services.AddSingleton<IAuthRateLimiter, RedisAuthRateLimiter>();
+
 builder.Services.AddHealthChecks()
     .AddCheck<PostgresHealthCheck>("postgresql", tags: new[] { "ready" })
+    .AddCheck<RedisHealthCheck>("redis", tags: new[] { "ready" })
     .AddCheck("self", () => HealthCheckResult.Healthy(), tags: new[] { "live" });
+builder.Services.AddOpenTelemetry()
+    .WithTracing(tracing => tracing
+        .AddAspNetCoreInstrumentation()
+        .AddHttpClientInstrumentation()
+        .AddEntityFrameworkCoreInstrumentation()
+        .AddSource("AuthService.Auth")
+        .AddOtlpExporter())
+    .WithMetrics(metrics => metrics
+        .AddAspNetCoreInstrumentation()
+        .AddMeter("AuthService.Auth")
+        .AddPrometheusExporter());
 builder.Services.AddFluentValidationAutoValidation();
 builder.Services.AddHttpContextAccessor();
 // Validation
@@ -76,35 +134,46 @@ builder.Services.AddValidatorsFromAssemblyContaining<AssignRoleValidator>();
 
 builder.Services.AddIdentity<ApplicationUser, ApplicationRole>(options =>
     {
-        // Настройка паролей (по желанию)
         options.Password.RequireDigit = true;
         options.Password.RequiredLength = 8;
         options.Password.RequireNonAlphanumeric = false;
         options.Password.RequireUppercase = true;
         options.Password.RequireLowercase = true;
 
-        // Настройка блокировки (по желанию)
         options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(5);
         options.Lockout.MaxFailedAccessAttempts = 5;
         options.Lockout.AllowedForNewUsers = true;
 
-        // Настройка пользователя
         options.User.RequireUniqueEmail = true;
         options.User.AllowedUserNameCharacters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._@+";
     })
     .AddEntityFrameworkStores<AppDbContext>()
     .AddDefaultTokenProviders();
 builder.Services.AddTransient<IEmailSender<ApplicationUser>, SmtpEmailSender>();
+builder.Services.AddScoped<IOutboxTransport, EmailOutboxTransport>();
 
 builder.Services.AddJwtAuthentication(builder.Configuration);
 builder.Services.AddAuthorization();
 
 builder.Services.AddMemoryCache();
 
+var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
+builder.Services.AddCors(options => options.AddPolicy("Frontend", policy =>
+{
+    policy.WithOrigins(allowedOrigins)
+        .AllowAnyHeader()
+        .AllowAnyMethod()
+        .AllowCredentials();
+}));
+
 builder.Services.AddSingleton<IAuthorizationPolicyProvider, PermissionPolicyProvider>();
 
 builder.Services.AddScoped<IAuthorizationHandler, PermissionAuthorizationHandler>();
 
+builder.Services.AddScoped<RemoveRoleValidator>();
+builder.Services.AddScoped<IGetRolesPermissionsHandler, GetRolesPermissionsHandler>();
+builder.Services.AddScoped<IGetAllRolesHandler, GetAllRolesHandler>();
+builder.Services.AddScoped<IRemoveRoleHandler, RemoveRoleHandler>();
 builder.Services.AddScoped<IAssignRoleHandler, AssignRoleHandler>();
 builder.Services.AddScoped<IPermissionRepository, PermissionRepository>();
 builder.Services.AddScoped<IGetMeHandler, GetMeHandler>();
@@ -131,7 +200,6 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
     options.ForwardedHeaders =
         ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
 
-    // Если вы доверяете всем прокси (например, в закрытой сети Docker), очистите лимиты
     options.KnownNetworks.Clear();
     options.KnownProxies.Clear();
 });
@@ -160,6 +228,7 @@ builder.Services.Configure<ApiBehaviorOptions>(options =>
             Title = "Validation Error",
             Detail = "One or more validation errors occurred."
         };
+        problemDetails.Extensions["traceId"] = context.HttpContext.TraceIdentifier;
 
         return new ObjectResult(problemDetails)
         {
@@ -187,7 +256,6 @@ builder.Services.AddRateLimiter(options =>
     {
         context.HttpContext.Response.StatusCode = StatusCodes.Status429TooManyRequests;
 
-        // Получаем сервис ProblemDetails из контейнера
         if (context.HttpContext.RequestServices.GetService<IProblemDetailsService>() is { } problemDetailsService)
         {
             await problemDetailsService.WriteAsync(new ProblemDetailsContext
@@ -212,12 +280,19 @@ app.UseForwardedHeaders(new ForwardedHeadersOptions
     ForwardedHeaders = ForwardedHeaders.XForwardedProto | ForwardedHeaders.XForwardedFor
 });
 
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHsts();
+}
+
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
     app.MapScalarApiReference();
     Console.WriteLine("Scalar is available at http://localhost:5071/scalar");
     using var scope = app.Services.CreateScope();
+    var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    await dbContext.Database.MigrateAsync();
     await DbInitializer.SeedRolesAndPermissionsAsync(scope.ServiceProvider);
 }
 app.MapHealthChecks("/health/live", new HealthCheckOptions
@@ -231,6 +306,7 @@ app.MapHealthChecks("/health/ready", new HealthCheckOptions
     Predicate = check => check.Tags.Contains("ready") || check.Tags.Contains("live"),
     ResponseWriter = WriteHealthCheckResponse
 });
+app.MapPrometheusScrapingEndpoint("/metrics");
 
 static Task WriteHealthCheckResponse(HttpContext context, HealthReport report)
 {
@@ -249,9 +325,14 @@ static Task WriteHealthCheckResponse(HttpContext context, HealthReport report)
     return context.Response.WriteAsync(JsonSerializer.Serialize(response));
 }
 app.UseHttpsRedirection();
+app.UseMiddleware<CorrelationIdMiddleware>();
+app.UseMiddleware<SecurityHeadersMiddleware>();
+app.UseMiddleware<RequestContentPolicyMiddleware>();
+app.UseCors("Frontend");
 app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseSerilogRequestLogging();
 
 app.MapControllers();
 

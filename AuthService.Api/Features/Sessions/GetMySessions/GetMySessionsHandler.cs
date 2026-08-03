@@ -15,15 +15,15 @@ public record GetMySessionsResult
 {
     public bool Success { get; set; }
     public List<UserSessionDTO>? Sessions { get; set; }
-    public string ErrorMessage { get; set; }
+    public string ErrorMessage { get; set; } = string.Empty;
 }
 
 public record UserSessionDTO
 {
     public Guid Id { get; set; }
-    public string DeviceName { get; set; }
-    public string UserAgentHash { get; set; }
-    public string IpHash { get; set; }
+    public string DeviceName { get; set; } = string.Empty;
+    public string UserAgentHash { get; set; } = string.Empty;
+    public string IpHash { get; set; } = string.Empty;
     public DateTime LastSeenAtUtc { get; set; }
     public DateTime CreatedAtUtc { get; set; }
     public DateTime? RevokedAtUtc { get; set; }

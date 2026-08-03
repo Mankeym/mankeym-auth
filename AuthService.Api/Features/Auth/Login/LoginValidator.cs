@@ -10,8 +10,7 @@ public class LoginValidator :  AbstractValidator<LoginRequest>
             .NotEmpty().WithMessage("Email is required.")
             .EmailAddress().WithMessage("Invalid email format.");
 
-        // 2. Проверка пароля
-        RuleFor(x => x.Password) // Замените на x.password
+        RuleFor(x => x.Password)
             .NotEmpty().WithMessage("Password is required.")
             .MinimumLength(8).WithMessage("Password must be at least 8 characters long.");
     }

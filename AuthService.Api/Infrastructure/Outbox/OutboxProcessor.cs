@@ -1,100 +1,97 @@
-﻿using System.Text.Json;
 using AuthService.Api.Infrastructure.Persistence;
 using AuthService.Api.Infrastructure.Persistence.Entities;
-using Microsoft.AspNetCore.Identity;
+using AuthService.Api.Infrastructure.Observability;
 using Microsoft.EntityFrameworkCore;
 
 namespace AuthService.Api.Infrastructure.Outbox;
 
-public class OutboxProcessor(IServiceScopeFactory scopeFactory) : BackgroundService
+public sealed class OutboxProcessor(
+    IServiceScopeFactory scopeFactory,
+    ILogger<OutboxProcessor> logger) : BackgroundService
 {
-    private const int MaxAttempts = 5;
+    internal const int MaxAttempts = 5;
+    private static readonly TimeSpan PollInterval = TimeSpan.FromSeconds(5);
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        while (!stoppingToken.IsCancellationRequested)
+        using var timer = new PeriodicTimer(PollInterval);
+
+        while (await timer.WaitForNextTickAsync(stoppingToken))
         {
             try
             {
-                using var scope = scopeFactory.CreateScope();
-                var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-                var emailSender = scope.ServiceProvider.GetRequiredService<IEmailSender<ApplicationUser>>();
-
-                var messages = await dbContext.OutboxMessages
-                    .Where(m => m.ProcessedAtUtc == null && m.Attempts < MaxAttempts)
-                    .OrderBy(m => m.OccurredAtUtc) // Используем твое имя свойства OccurredAtUtc
-                    .Take(20)
-                    .ToListAsync(stoppingToken);
-
-                foreach (var message in messages)
-                {
-                    message.Attempts++;
-
-                    try
-                    {
-                        // Используем switch-выражение или паттерн-матчинг по типу сообщения
-                        await (message.Type switch
-                        {
-                            "PasswordResetEmailRequested" => ProcessPasswordResetAsync(message, dbContext, emailSender, stoppingToken),
-                            "EmailConfirmationEmailRequested" => ProcessEmailConfirmationAsync(message, dbContext, emailSender, stoppingToken),
-                            _ => throw new InvalidOperationException($"Unknown outbox message type: {message.Type}")
-                        });
-
-                        message.ProcessedAtUtc = DateTime.UtcNow;
-                        message.Error = null;
-                    }
-                    catch (Exception ex)
-                    {
-                        message.Error = ex.Message;
-                    }
-                }
-
-                if (messages.Count > 0)
-                {
-                    await dbContext.SaveChangesAsync(stoppingToken);
-                }
+                await ProcessPendingMessagesAsync(stoppingToken);
             }
-            catch (Exception)
+            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {
-                // Защита от падения фонового сервиса при временных проблемах с базой данных
+                break;
             }
-
-            // Ждем перед следующей итерацией (5 секунд)
-            await Task.Delay(TimeSpan.FromSeconds(5), stoppingToken);
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Outbox processing tick failed.");
+            }
         }
     }
-    private static async Task ProcessPasswordResetAsync(
-        OutboxMessage message,
-        AppDbContext dbContext,
-        IEmailSender<ApplicationUser> emailSender,
-        CancellationToken stoppingToken)
+
+    internal async Task ProcessPendingMessagesAsync(CancellationToken cancellationToken)
     {
-        var data = JsonSerializer.Deserialize<PasswordResetEmailPayload>(message.Payload);
-        if (data == null) return;
+        await using var scope = scopeFactory.CreateAsyncScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var transport = scope.ServiceProvider.GetRequiredService<IOutboxTransport>();
+        var now = DateTime.UtcNow;
 
-        var user = await dbContext.Users.FindAsync(new object[] { data.UserId }, stoppingToken);
-        if (user != null)
+        var messages = await dbContext.OutboxMessages
+            .Where(m => m.ProcessedAtUtc == null
+                        && m.Attempts < MaxAttempts
+                        && (m.NextAttemptAtUtc == null || m.NextAttemptAtUtc <= now))
+            .OrderBy(m => m.NextAttemptAtUtc)
+            .ThenBy(m => m.OccurredAtUtc)
+            .Take(20)
+            .ToListAsync(cancellationToken);
+        AuthTelemetry.SetOutboxBacklog(messages.Count);
+        var oldestPending = await dbContext.OutboxMessages
+            .Where(m => m.ProcessedAtUtc == null)
+            .MinAsync(m => (DateTime?)m.OccurredAtUtc, cancellationToken);
+        AuthTelemetry.SetOutboxLag(oldestPending is null ? TimeSpan.Zero : DateTime.UtcNow - oldestPending.Value);
+
+        foreach (var message in messages)
         {
-            await emailSender.SendPasswordResetLinkAsync(user, data.Email, data.ResetLink);
+            message.Attempts++;
+
+            try
+            {
+                using var activity = AuthTelemetry.ActivitySource.StartActivity("outbox.deliver");
+                activity?.SetTag("outbox.message_id", message.Id);
+                activity?.SetTag("outbox.type", message.Type);
+                await transport.DeliverAsync(
+                    new OutboxDelivery(message.Id, message.Type, message.Payload),
+                    cancellationToken);
+                message.ProcessedAtUtc = DateTime.UtcNow;
+                message.NextAttemptAtUtc = null;
+                message.Error = null;
+                AuthTelemetry.OutboxDeliveries.Add(1, new KeyValuePair<string, object?>("outbox.type", message.Type));
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                message.Error = "Delivery failed.";
+                message.NextAttemptAtUtc = message.Attempts < MaxAttempts
+                    ? DateTime.UtcNow.Add(GetRetryDelay(message.Attempts))
+                    : null;
+                logger.LogWarning(ex, "Outbox message {MessageId} delivery attempt {Attempt} failed.", message.Id, message.Attempts);
+                AuthTelemetry.OutboxDeliveryFailures.Add(1, new KeyValuePair<string, object?>("outbox.type", message.Type));
+            }
+        }
+
+        if (messages.Count > 0)
+        {
+            await dbContext.SaveChangesAsync(cancellationToken);
         }
     }
 
-    private static async Task ProcessEmailConfirmationAsync(
-        OutboxMessage message,
-        AppDbContext dbContext,
-        IEmailSender<ApplicationUser> emailSender,
-        CancellationToken stoppingToken)
+    internal static TimeSpan GetRetryDelay(int attempts) => attempts switch
     {
-        var data = JsonSerializer.Deserialize<EmailConfirmationEmailPayload>(message.Payload);
-        if (data == null) return;
-
-        var user = await dbContext.Users.FindAsync(new object[] { data.UserId }, stoppingToken);
-        if (user != null)
-        {
-            await emailSender.SendConfirmationLinkAsync(user, data.Email, data.ConfirmationLink);
-        }
-    }
+        1 => TimeSpan.FromMinutes(1),
+        2 => TimeSpan.FromMinutes(5),
+        _ => TimeSpan.FromMinutes(15)
+    };
 }
-
-internal record PasswordResetEmailPayload(string Email, Guid UserId, string ResetLink);
-internal record EmailConfirmationEmailPayload(string Email, Guid UserId, string ConfirmationLink);

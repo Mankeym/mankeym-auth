@@ -38,7 +38,6 @@ public class ForgotPasswordHandler(
         var token = await userManager.GeneratePasswordResetTokenAsync(user);
         var encodedToken = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(token));
 
-        // TODO: Здесь формируется ссылка для подтверждения (замените на ваш фронтенд URL)
         var baseUrl = urlProvider.GetValidRedirectUrl(null, "reset-password");
 
         var expiresAt = DateTimeOffset.UtcNow.AddHours(1).ToUnixTimeSeconds();
@@ -58,7 +57,7 @@ public class ForgotPasswordHandler(
 
         dbContext.OutboxMessages.Add(outboxMessage);
 
-        await auditLogger.LogAsync("ForgotPasswordRequested", "Success", new { Email = request.Email });
+        await auditLogger.LogAsync("ForgotPasswordRequested", "Success", new { UserId = user.Id }, dbContext);
 
         await dbContext.SaveChangesAsync();
 

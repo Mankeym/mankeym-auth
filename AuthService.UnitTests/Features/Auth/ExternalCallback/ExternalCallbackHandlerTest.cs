@@ -23,6 +23,7 @@ public class ExternalCallbackHandlerTests
     private readonly Mock<IJwtProvider> _jwtProviderMock;
     private readonly Mock<IAuditLogger> _auditLoggerMock;
     private readonly ExternalCallbackHandler _handler;
+    private readonly Mock<IPermissionRepository> _permissionRepositoryMock;
     private readonly AppDbContext _dbContext;
 
     public ExternalCallbackHandlerTests()
@@ -43,6 +44,7 @@ public class ExternalCallbackHandlerTests
         _urlProviderMock = new Mock<IFrontendUrlProvider>();
         _jwtProviderMock = new Mock<IJwtProvider>();
         _auditLoggerMock = new Mock<IAuditLogger>();
+        _permissionRepositoryMock = new Mock<IPermissionRepository>();
 
         var dbOptions = new DbContextOptionsBuilder<AppDbContext>()
             .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
@@ -55,7 +57,8 @@ public class ExternalCallbackHandlerTests
             _userManagerMock.Object,
             _auditLoggerMock.Object,
             _dbContext,
-            _jwtProviderMock.Object
+            _jwtProviderMock.Object,
+            _permissionRepositoryMock.Object
         );
     }
 
@@ -66,14 +69,14 @@ public class ExternalCallbackHandlerTests
         var claims = new List<Claim>
         {
             new(ClaimTypes.Email, "test@test.com"),
-            new("email_verified", "false") // Почта не подтверждена
+            new("email_verified", "false")
         };
         var identity = new ClaimsIdentity(claims, "TestAuth");
         var principal = new ClaimsPrincipal(identity);
         var loginInfo = new ExternalLoginInfo(principal, "Google", "123", "Google");
 
         _signInManagerMock
-            .Setup(s => s.GetExternalLoginInfoAsync(It.IsAny<string?>())) // Явно передаем параметр для скрытого дефолтного аргумента
+            .Setup(s => s.GetExternalLoginInfoAsync(It.IsAny<string?>()))
             .ReturnsAsync(loginInfo);
 
         _urlProviderMock

@@ -49,7 +49,8 @@ public class ResetPasswordHandler(
         if (!result.Succeeded)
         {
             var errors = string.Join(", ", result.Errors.Select(e => e.Description));
-            await auditLogger.LogAsync("ResetPasswordFailed", errors, new { UserId = request.UserId });
+            await auditLogger.LogAsync("ResetPasswordFailed", errors, new { UserId = request.UserId }, dbContext);
+            await dbContext.SaveChangesAsync();
             return new ResetPasswordResponse(false, "Invalid or expired password reset token.");
         }
 
@@ -65,7 +66,8 @@ public class ResetPasswordHandler(
             .Where(t => t.UserId == user.Id && t.RevokedAtUtc == null)
             .ExecuteUpdateAsync(t => t.SetProperty(u => u.RevokedAtUtc, now));
 
-        await auditLogger.LogAsync("PasswordReset", "Success", new { UserId = request.UserId });
+        await auditLogger.LogAsync("PasswordReset", "Success", new { UserId = request.UserId }, dbContext);
+        await dbContext.SaveChangesAsync();
 
         return new ResetPasswordResponse(true, "Password successfully reset. All active sessions have been revoked.");
     }

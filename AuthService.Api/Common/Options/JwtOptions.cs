@@ -6,7 +6,7 @@ public class JwtOptions
 {
     public const string SectionName = "JwtSettings";
     [Required]
-    public string PrivateKey { get; set; } = string.Empty; // Для подписи (AuthService)
+    public string PrivateKey { get; set; } = string.Empty;
 
     [Required]
     public string PublicKey { get; set; } = string.Empty;

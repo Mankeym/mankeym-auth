@@ -4,6 +4,8 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Superpower.Model;
 
+using AuthService.Api.Features.Audit;
+
 namespace AuthService.Api.Features.Users.AssignRole;
 
 public interface IAssignRoleHandler
@@ -15,8 +17,10 @@ public record AssignRoleRequest(string UserId, string RoleName, string currentUs
 public record AssignRoleResponse(bool Success, string Message);
 
 public class AssignRoleHandler(
+    AppDbContext dbContext,
     UserManager<ApplicationUser> userManager,
-    RoleManager<ApplicationRole> roleManager)
+    RoleManager<ApplicationRole> roleManager,
+    IAuditLogger auditLogger)
     : IAssignRoleHandler
 {
     public async Task<AssignRoleResponse> AssignRoleAsync(AssignRoleRequest request)
@@ -39,12 +43,23 @@ public class AssignRoleHandler(
             return new AssignRoleResponse(false, "Role does not exist.");
         }
 
+        await using var transaction = await dbContext.Database.BeginTransactionAsync();
+
         var result = await userManager.AddToRoleAsync(user, roleName);
         if (!result.Succeeded)
         {
             var errors = string.Join(", ", result.Errors.Select(e => e.Description));
             return new AssignRoleResponse(false, $"Failed to assign role: {errors}");
         }
+
+        await auditLogger.LogAsync(
+            "RoleAssigned",
+            "Success",
+            new { TargetUserId = user.Id, Role = roleName },
+            dbContext);
+
+        await dbContext.SaveChangesAsync();
+        await transaction.CommitAsync();
 
         return new AssignRoleResponse(true, "Role assigned successfully.");
     }

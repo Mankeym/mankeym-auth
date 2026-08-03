@@ -24,7 +24,8 @@ public class ExternalCallbackHandler(
     UserManager<ApplicationUser> userManager,
     IAuditLogger auditLogger,
     AppDbContext dbContext,
-    IJwtProvider jwtProvider) : IExternalCallbackHandler
+    IJwtProvider jwtProvider,
+    IPermissionRepository permissionRepository) : IExternalCallbackHandler
 {
     public async Task<IActionResult> HandleCallback(ExternalCallbackRequest request)
     {
@@ -32,10 +33,12 @@ public class ExternalCallbackHandler(
         if (info == null)
         {
 
-            await auditLogger.LogAsync("ExternalAuth", "Failed_NoProviderInfo", new { request.Provider });
+            await auditLogger.LogAsync("ExternalAuth", "Failed_NoProviderInfo", new { request.Provider }, dbContext);
             var errorPath = frontendUrlProvider.GetValidRedirectUrl(
                 string.IsNullOrEmpty(request.ReturnUrl) ? null : new Uri(request.ReturnUrl, UriKind.RelativeOrAbsolute),
                 "login?error=oauth_failed");
+
+            await dbContext.SaveChangesAsync();
             return new RedirectResult(errorPath.ToString());
         }
 
@@ -45,10 +48,12 @@ public class ExternalCallbackHandler(
 
         if (!isEmailVerified)
         {
-            await auditLogger.LogAsync("ExternalAuth", "Failed_EmailNotVerified", new { info.LoginProvider });
+            await auditLogger.LogAsync("ExternalAuth", "Failed_EmailNotVerified", new { info.LoginProvider }, dbContext);
             var errorPath = frontendUrlProvider.GetValidRedirectUrl(
                 string.IsNullOrEmpty(request.ReturnUrl) ? null : new Uri(request.ReturnUrl, UriKind.RelativeOrAbsolute),
                 "login?error=email_not_verified");
+
+            await dbContext.SaveChangesAsync();
             return new RedirectResult(errorPath.ToString());
         }
 
@@ -65,7 +70,13 @@ public class ExternalCallbackHandler(
 
             await userManager.AddToRoleAsync(user, "User");
 
-            await auditLogger.LogAsync("ExternalAuth", "Success_NewUserCreated", new { info.LoginProvider, Email = email, UserId = user.Id });
+            await auditLogger.LogAsync(
+                "ExternalAuth",
+                "Success_NewUserCreated",
+                new { info.LoginProvider, Email = email,
+                    UserId = user.Id }, dbContext);
+
+            await dbContext.SaveChangesAsync();
         }
         else
         {
@@ -73,7 +84,7 @@ public class ExternalCallbackHandler(
 
             if (!logins.Any(l => l.LoginProvider == info.LoginProvider))
             {
-                await auditLogger.LogAsync("ExternalAuth", "Blocked_RequireManualLinking", new { info.LoginProvider, Email = email, UserId = user.Id });
+                await auditLogger.LogAsync("ExternalAuth", "Blocked_RequireManualLinking", new { info.LoginProvider, Email = email, UserId = user.Id }, dbContext);
                 Uri? uri = string.IsNullOrEmpty(request.ReturnUrl) ? null : new Uri(request.ReturnUrl, UriKind.RelativeOrAbsolute);
                 var requireLinkingPath = frontendUrlProvider.GetValidRedirectUrl(uri, "login");
 
@@ -85,14 +96,17 @@ public class ExternalCallbackHandler(
                 };
 
                 var finalRedirectUriLinking = QueryHelpers.AddQueryString(requireLinkingPath.ToString(), param);
-
+                await dbContext.SaveChangesAsync();
                 return new RedirectResult(finalRedirectUriLinking);
             }
 
         }
 
         var roles = await userManager.GetRolesAsync(user);
-        string accessToken = await jwtProvider.GenerateAccessToken(user.Id, user.Email, roles);
+        var permissions = await permissionRepository.GetUserPermissionsAsync(user.Id);
+        var securityStamp = await userManager.GetSecurityStampAsync(user);
+        var resolvedEmail = user.Email ?? user.UserName ?? throw new InvalidOperationException("User email is missing.");
+        string accessToken = await jwtProvider.GenerateAccessToken(user.Id, resolvedEmail, roles, permissions, securityStamp);
 
         string rawRefreshToken = Convert.ToBase64String(RandomNumberGenerator.GetBytes(64));
         var refreshTokenHash = TokenSecurityHelper.ComputeSha256Hash(rawRefreshToken);

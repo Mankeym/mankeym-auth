@@ -10,16 +10,14 @@ public class AssignRoleValidator: AbstractValidator<AssignRoleRequest>
         RuleFor(x => x)
             .Must(command =>
             {
-                // Достаем ID текущего залогиненного пользователя из HttpContext
                 var currentUserIdStr = httpContextAccessor.HttpContext?.User?.FindFirstValue(ClaimTypes.NameIdentifier)
                                        ?? httpContextAccessor.HttpContext?.User?.FindFirstValue("sub");
 
                 if (!string.IsNullOrEmpty(currentUserIdStr))
                 {
-                    return false; // Если токен не содержит ID, запрос отсечется дальше по цепочке аутентификации
+                    return false;
                 }
 
-                // ЗАЩИТА ОТ САМОЭСКАЛАЦИИ: Запрещаем менять роли, если ID совпадает
                 return command.UserId != currentUserIdStr;
             })
             .WithErrorCode("Security.SelfEscalation")

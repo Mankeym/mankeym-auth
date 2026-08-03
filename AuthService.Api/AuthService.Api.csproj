@@ -27,18 +27,18 @@
           <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
           <PrivateAssets>all</PrivateAssets>
         </PackageReference>
+        <PackageReference Include="Microsoft.Extensions.Caching.StackExchangeRedis" Version="9.0.0" />
         <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="9.0.0" />
+        <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.17.0" />
+        <PackageReference Include="OpenTelemetry.Exporter.Prometheus.AspNetCore" Version="1.17.0-beta.1" />
+        <PackageReference Include="OpenTelemetry.Extensions.Hosting" Version="1.17.0" />
+        <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.17.0" />
+        <PackageReference Include="OpenTelemetry.Instrumentation.EntityFrameworkCore" Version="1.17.0-beta.1" />
+        <PackageReference Include="OpenTelemetry.Instrumentation.Http" Version="1.17.0" />
         <PackageReference Include="Scalar.AspNetCore" Version="2.16.17" />
         <PackageReference Include="Serilog.AspNetCore" Version="9.0.0" />
+        <PackageReference Include="StackExchange.Redis" Version="2.8.24" />
         <PackageReference Include="xunit.assert" Version="2.9.3" />
-    </ItemGroup>
-
-    <ItemGroup>
-      <Folder Include="Common\Errors\" />
-      <Folder Include="Infrastructure\Identity\" />
-      <Folder Include="Infrastructure\Messaging\" />
-      <Folder Include="Infrastructure\OAuth\" />
-      <Folder Include="Infrastructure\Observability\" />
     </ItemGroup>
 
     <ItemGroup>

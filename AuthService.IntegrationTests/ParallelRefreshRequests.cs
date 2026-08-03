@@ -28,7 +28,13 @@ public class ParallelRefreshIntegrationTests : IClassFixture<CustomApiFactory>
         var userManagerSetup = scopeSetup.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
 
         var userId = Guid.NewGuid();
-        var user = new ApplicationUser { Id = userId, UserName = $"testuser_{Guid.NewGuid()}@test.com", Email = $"testuser_{Guid.NewGuid()}@test.com" };
+        var user = new ApplicationUser
+        {
+            Id = userId,
+            UserName = $"testuser_{Guid.NewGuid()}@test.com",
+            Email = $"testuser_{Guid.NewGuid()}@test.com",
+            SecurityStamp = Guid.NewGuid().ToString()
+        };
 
         dbContextSetup.Users.Add(user);
 
@@ -61,7 +67,6 @@ public class ParallelRefreshIntegrationTests : IClassFixture<CustomApiFactory>
         dbContextSetup.RefreshTokens.Add(refreshToken);
         await dbContextSetup.SaveChangesAsync();
 
-        // Создаем ДВА НЕЗАВИСИМЫХ SCOPE для двух параллельных запросов (как в реальном Web API)
         using var scope1 = _factory.Services.CreateScope();
         using var scope2 = _factory.Services.CreateScope();
 
@@ -73,13 +78,34 @@ public class ParallelRefreshIntegrationTests : IClassFixture<CustomApiFactory>
 
         var jwtProviderMock = new Mock<IJwtProvider>();
         jwtProviderMock
-            .Setup(x => x.GenerateAccessToken(It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<IEnumerable<string>>()))
+            .Setup(x => x.GenerateAccessToken(
+                It.IsAny<Guid>(),
+                It.IsAny<string>(),
+                It.IsAny<IEnumerable<string>>(),
+                It.IsAny<IEnumerable<string>>(),
+                It.IsAny<string>()))
             .ReturnsAsync("new-access-token");
 
-        var handler1 = new RefreshHandler(dbContext1, jwtProviderMock.Object, new Mock<IAuditLogger>().Object, userManager1);
-        var handler2 = new RefreshHandler(dbContext2, jwtProviderMock.Object, new Mock<IAuditLogger>().Object, userManager2);
+        var permissionRepoMock = new Mock<IPermissionRepository>();
+        permissionRepoMock
+            .Setup(x => x.GetUserPermissionsAsync(It.IsAny<Guid>()))
+            .ReturnsAsync(new List<string>());
 
-        // Act: Запускаем параллельно два независимых хэндлера с отдельными DbContext
+        var handler1 = new RefreshHandler(
+            dbContext1,
+            jwtProviderMock.Object,
+            new Mock<IAuditLogger>().Object,
+            userManager1,
+            permissionRepoMock.Object);
+
+        var handler2 = new RefreshHandler(
+            dbContext2,
+            jwtProviderMock.Object,
+            new Mock<IAuditLogger>().Object,
+            userManager2,
+            permissionRepoMock.Object);
+
+        // Act
         var task1 = handler1.RefreshTokensAsync(rawToken);
         var task2 = handler2.RefreshTokensAsync(rawToken);
 

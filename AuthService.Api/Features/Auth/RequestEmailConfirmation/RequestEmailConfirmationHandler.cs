@@ -56,7 +56,7 @@ public class RequestEmailConfirmationHandler(
         };
         dbContext.OutboxMessages.Add(outboxMessage);
 
-        await auditLogger.LogAsync("EmailConfirmationRequested", "Success", new { Email = email });
+        await auditLogger.LogAsync("EmailConfirmationRequested", "Success", new { UserId = user.Id }, dbContext);
 
         await dbContext.SaveChangesAsync();
 

@@ -21,6 +21,7 @@ public class LoginHandlerTest: IDisposable
     private readonly Mock<IAuditLogger> _loggerMock;
     private readonly Mock<IJwtProvider> _jwtProviderMock;
     private readonly Mock<IHttpContextAccessor> _httpContextAccessorMock;
+    private readonly Mock<IPermissionRepository> _permissionRepositoryMock;
 
     private readonly LoginHandler _loginHandler;
 
@@ -46,6 +47,7 @@ public class LoginHandlerTest: IDisposable
             .Options;
 
         _dbContextMock = new AppDbContext(options);
+        _permissionRepositoryMock = new Mock<IPermissionRepository>();
 
         _loggerMock = new Mock<IAuditLogger>();
         _jwtProviderMock = new Mock<IJwtProvider>();
@@ -60,7 +62,8 @@ public class LoginHandlerTest: IDisposable
             _dbContextMock,
             _loggerMock.Object,
             _jwtProviderMock.Object,
-            _httpContextAccessorMock.Object
+            _httpContextAccessorMock.Object,
+            _permissionRepositoryMock.Object
         );
     }
 
@@ -118,7 +121,7 @@ public class LoginHandlerTest: IDisposable
         Assert.False(result.Success);
         Assert.Contains("Account is locked out", result.ErrorMessage);
 
-        _loggerMock.Verify(x => x.LogAsync("AccountLocked", "IsLockedOut", It.IsAny<UserLoggedInAuditEvent>(), default), Times.Once);
+        _loggerMock.Verify(x => x.LogAsync("AccountLocked", "IsLockedOut", It.IsAny<UserLoggedInAuditEvent>(), It.IsAny<AppDbContext>()), Times.Once);
     }
 
     [Fact]
@@ -159,7 +162,7 @@ public class LoginHandlerTest: IDisposable
         _userManagerMock.Setup(x => x.GetRolesAsync(user))
             .ReturnsAsync(roles);
 
-        _jwtProviderMock.Setup(x => x.GenerateAccessToken(userId, "test@test.com", roles))
+        _jwtProviderMock.Setup(x => x.GenerateAccessToken(userId, "test@test.com", roles, It.IsAny<IEnumerable<string>>(), It.IsAny<string>()))
             .ReturnsAsync(expectedToken);
 
         // Act
@@ -174,6 +177,6 @@ public class LoginHandlerTest: IDisposable
         savedSession.Should().NotBeNull();
         savedSession.DeviceName.Should().NotBeNullOrEmpty();
 
-        _loggerMock.Verify(x => x.LogAsync("LoginSucceeded", "Success", It.IsAny<UserLoggedInAuditEvent>(), default), Times.Once);
+        _loggerMock.Verify(x => x.LogAsync("LoginSucceeded", "Success", It.IsAny<UserLoggedInAuditEvent>(), It.IsAny<AppDbContext>()), Times.Once);
     }
 }

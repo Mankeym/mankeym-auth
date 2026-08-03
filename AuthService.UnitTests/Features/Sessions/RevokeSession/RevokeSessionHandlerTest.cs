@@ -79,7 +79,7 @@ public class RevokeSessionHandlerTest: IDisposable
             "SessionRevoked",
             "Success",
             It.IsAny<object>(),
-            It.IsAny<CancellationToken>()
+            _dbContextMock
         ), Times.Once);
     }
 
@@ -107,7 +107,7 @@ public class RevokeSessionHandlerTest: IDisposable
             It.IsAny<string>(),
             It.IsAny<string>(),
             It.IsAny<object>(),
-            It.IsAny<CancellationToken>()
+            It.IsAny<AppDbContext>()
         ), Times.Never);
     }
 }

@@ -15,7 +15,6 @@ public class RequestEmailConfirmationEndPoint(IRequestEmailConfirmationHandler h
     {
         var result = await handler.RequestEmailConfirmationAsync(request.email);
 
-        // Всегда возвращаем 200 OK (Generic Response)
         return Ok(result);
     }
 }

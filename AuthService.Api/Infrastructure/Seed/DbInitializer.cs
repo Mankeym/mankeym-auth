@@ -1,4 +1,5 @@
-﻿using AuthService.Api.Common.Authorization;
+﻿using System.Security.Claims;
+using AuthService.Api.Common.Authorization;
 using AuthService.Api.Infrastructure.Persistence;
 using AuthService.Api.Infrastructure.Persistence.Entities;
 using Microsoft.AspNetCore.Identity;
@@ -37,9 +38,9 @@ public static class DbInitializer
             var allDbPermissions = await context.Permissions.ToListAsync();
             var rolePermissions = new Dictionary<string, List<string>>
             {
-                ["User"] = new List<string> { "profile:read", "profile:update" },
-                ["Moderator"] = new List<string> { "profile:read", "profile:update", "reports:view", "audit:view" },
-                ["Admin"] = new List<string> { "profile:*", "reports:*", "users:manage", "audit:view" }
+                ["User"] = new List<string> { Permissions.ProfileRead, Permissions.ProfileUpdate },
+                ["Moderator"] = new List<string> {  Permissions.ProfileRead, Permissions.ProfileUpdate, Permissions.AuditView },
+                ["Admin"] = new List<string> { Permissions.ProfileAll, Permissions.UsersManage,  Permissions.AuditView, Permissions.RolesAll }
             };
 
             foreach (var (roleName, permissionCodes) in rolePermissions)
@@ -55,6 +56,11 @@ public static class DbInitializer
                         continue;
                     }
                     role = await roleManager.FindByNameAsync(roleName);
+                    if (role == null)
+                    {
+                        logger.LogError("Role {Role} was not found after creation.", roleName);
+                        continue;
+                    }
                 }
 
                 var roleWithPermissions = await context.Roles
@@ -90,15 +96,12 @@ public static class DbInitializer
             await context.SaveChangesAsync();
             logger.LogInformation("Roles and permissions successfully seeded.");
 
-
-
             var adminEmail = configuration["ADMIN_EMAIL"];
             var adminPassword = configuration["ADMIN_PASSWORD"];
             var adminRole = configuration["ADMIN_ROLE"] ?? "Admin";
 
             if (!string.IsNullOrEmpty(adminEmail) && !string.IsNullOrEmpty(adminPassword))
             {
-                // Ищем пользователя по Email
                 var adminUser = await userManager.FindByEmailAsync(adminEmail);
 
                 if (adminUser == null)
@@ -107,18 +110,14 @@ public static class DbInitializer
                     {
                         UserName = adminEmail,
                         Email = adminEmail,
-                        EmailConfirmed = true, // Сразу подтверждаем email админу
+                        EmailConfirmed = true,
                         CreatedAtUTC = DateTime.UtcNow,
                         UpdatedAtUTC = DateTime.UtcNow
-                        // Если в вашем ApplicationUser есть FirstName и LastName, раскомментируйте:
-                        // FirstName = configuration["ADMIN_FIRST_NAME"],
-                        // LastName = configuration["ADMIN_LAST_NAME"]
                     };
 
                     var createAdminResult = await userManager.CreateAsync(adminUser, adminPassword);
                     if (createAdminResult.Succeeded)
                     {
-                        // Выдаем роль Admin
                         await userManager.AddToRoleAsync(adminUser, adminRole);
                         logger.LogInformation("Superuser '{Email}' created successfully with role '{Role}'.", adminEmail, adminRole);
                     }
@@ -130,7 +129,6 @@ public static class DbInitializer
                 }
                 else
                 {
-                    // Пользователь уже существует. Убедимся, что у него точно есть админская роль.
                     if (!await userManager.IsInRoleAsync(adminUser, adminRole))
                     {
                         await userManager.AddToRoleAsync(adminUser, adminRole);

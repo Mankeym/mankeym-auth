@@ -1,5 +1,5 @@
 ﻿using AuthService.Api.Features.Audit;
-using AuthService.Api.Features.Auth.Logout; // Укажите ваши неймспейсы
+using AuthService.Api.Features.Auth.Logout;
 using AuthService.Api.Infrastructure.Persistence;
 using AuthService.Api.Infrastructure.Persistence.Entities;
 using AuthService.Api.Infrastructure.Tokens;
@@ -38,15 +38,15 @@ public class LogoutHandlerTest : IDisposable
     [Theory]
     [InlineData("")]
     [InlineData(null)]
-    public async Task LogoutAsync_EmptyOrNullToken_ReturnsSuccess_And_DoesNothing(string rawToken)
+    public async Task LogoutAsync_EmptyOrNullToken_ReturnsSuccess_And_DoesNothing(string? rawToken)
     {
         // Act
-        var result = await _handler.LogoutAsync(rawToken!);
+        var result = await _handler.LogoutAsync(rawToken);
 
         // Assert
         Assert.True(result.Success);
 
-        _auditLoggerMock.Verify(x => x.LogAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<object>(), CancellationToken.None), Times.Never);
+        _auditLoggerMock.Verify(x => x.LogAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<object>(), It.IsAny<AppDbContext>()), Times.Never);
     }
 
     [Fact]
@@ -58,7 +58,7 @@ public class LogoutHandlerTest : IDisposable
         // Assert
         Assert.True(result.Success);
 
-        _auditLoggerMock.Verify(x => x.LogAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<object>(), CancellationToken.None), Times.Never);
+        _auditLoggerMock.Verify(x => x.LogAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<object>(), It.IsAny<AppDbContext>()), Times.Never);
     }
 
     [Fact]
@@ -77,7 +77,7 @@ public class LogoutHandlerTest : IDisposable
             DeviceName = "TestDevice",
             IpHash = "IpHash",
             UserAgentHash = "AgentHash",
-            RevokedAtUtc = null // Пока активна
+            RevokedAtUtc = null
         };
 
         var tokenToLogout = new RefreshToken
@@ -122,6 +122,6 @@ public class LogoutHandlerTest : IDisposable
         _auditLoggerMock.Verify(x => x.LogAsync(
             "UserLogout",
             "Success",
-            It.IsAny<object>(), CancellationToken.None), Times.Once);
+            It.IsAny<object>(), _dbContext), Times.Once);
     }
 }

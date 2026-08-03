@@ -22,7 +22,7 @@ public class PasswordResetEndpointTests : IClassFixture<CustomApiFactory>
     [Fact]
     public async Task ForgotPassword_WithExistingConfirmedEmail_ReturnsAcceptedAndQueuesOutboxMessage()
     {
-        // Arrange: Создаем подтвержденного пользователя в базе
+        // Arrange
         var email = "forgot-test@example.com";
         await _factory.CreateConfirmedUserAsync(email, "StrongPassword123!");
 
@@ -31,10 +31,9 @@ public class PasswordResetEndpointTests : IClassFixture<CustomApiFactory>
         // Act
         var response = await _client.PostAsJsonAsync("api/v1/auth/forgot-password", request);
 
-        // Assert: Проверяем статус 202 Accepted (согласно требованиям)
+        // Assert
         response.StatusCode.Should().Be(HttpStatusCode.Accepted);
 
-        // Проверяем, что в базе появился OutboxMessage для отправки письма
         var outboxMessageExists = await _factory.HasOutboxMessageOfTypeAsync("PasswordResetEmailRequested");
         outboxMessageExists.Should().BeTrue();
     }
@@ -73,14 +72,13 @@ public class PasswordResetEndpointTests : IClassFixture<CustomApiFactory>
             NewPassword = "NewSecurePassword123!"
         };
 
-        // 1-й запрос: Успешный сброс
         var firstResponse = await _client.PostAsJsonAsync("api/v1/auth/reset-password", request);
         firstResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
-        // Act: 2-й запрос с тем же токеном (Reused token)
+        // Act
         var secondResponse = await _client.PostAsJsonAsync("api/v1/auth/reset-password", request);
 
-        // Assert: Токен уже недействителен (SecurityStamp изменился)
+        // Assert
         secondResponse.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 }
