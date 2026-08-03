@@ -35,11 +35,13 @@ jobs:
 
           threshold = 0.20
           reports = list(pathlib.Path("TestResults/unit").rglob("coverage.cobertura.xml"))
-          if len(reports) != 1:
-              sys.exit(f"Expected one unit coverage report, found {len(reports)}.")
+          if not reports:
+              sys.exit("Unit coverage report was not produced.")
 
-          line_rate = float(element_tree.parse(reports[0]).getroot().attrib["line-rate"])
-          print(f"Unit line coverage: {line_rate:.2%}; required: {threshold:.2%}")
+          line_rate = min(
+              float(element_tree.parse(report).getroot().attrib["line-rate"])
+              for report in reports)
+          print(f"Unit line coverage: {line_rate:.2%}; required: {threshold:.2%}; reports: {len(reports)}")
           if line_rate < threshold:
               sys.exit("Unit line coverage is below the required baseline.")
           PY
