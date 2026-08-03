@@ -42,6 +42,8 @@ dotnet_diagnostic.IDE0003.severity = suggestion
 # These rules are either framework-inapplicable or intentionally handled by ASP.NET Core.
 dotnet_diagnostic.CA1515.severity = none
 dotnet_diagnostic.CA2007.severity = none
+# IdentityModel caches signing providers; the RSA key must remain alive for the process lifetime.
+dotnet_diagnostic.CA2000.severity = suggestion
 dotnet_diagnostic.CA2227.severity = none
 dotnet_diagnostic.CA1848.severity = suggestion
 
