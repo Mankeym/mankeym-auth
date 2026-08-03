@@ -38,7 +38,7 @@ Any TTL change requires updating tests and release notes. Refresh tokens are rot
 | Email enumeration | Identical generic response for unknown and known email. |
 | CSRF | Refresh token is cookie-bound with `SameSite=Strict`; state-changing browser requests must remain same-site. |
 | Open redirect | Frontend redirect URL allow-list. |
-| OAuth state attack | Framework external-auth correlation/state validation; callback rate limiting. |
+| OAuth state attack | Framework external-auth correlation/state validation; callback rate limiting. OAuth redirects carry no access or refresh tokens: refresh token is set as an HttpOnly cookie and the SPA obtains an access token through `/auth/refresh`. |
 
 ## Privacy policy
 

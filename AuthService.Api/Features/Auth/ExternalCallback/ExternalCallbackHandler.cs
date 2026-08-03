@@ -1,4 +1,4 @@
-﻿using System.Security.Claims;
+using System.Security.Claims;
 using System.Security.Cryptography;
 using AuthService.Api.Features.Audit;
 using AuthService.Api.Infrastructure.Persistence;
@@ -7,7 +7,6 @@ using AuthService.Api.Infrastructure.Security;
 using AuthService.Api.Infrastructure.Tokens;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.WebUtilities;
 
 namespace AuthService.Api.Features.Auth.ExternalCallback;
 
@@ -24,8 +23,7 @@ public class ExternalCallbackHandler(
     UserManager<ApplicationUser> userManager,
     IAuditLogger auditLogger,
     AppDbContext dbContext,
-    IJwtProvider jwtProvider,
-    IPermissionRepository permissionRepository) : IExternalCallbackHandler
+    IHttpContextAccessor httpContextAccessor) : IExternalCallbackHandler
 {
     public async Task<IActionResult> HandleCallback(ExternalCallbackRequest request)
     {
@@ -73,8 +71,7 @@ public class ExternalCallbackHandler(
             await auditLogger.LogAsync(
                 "ExternalAuth",
                 "Success_NewUserCreated",
-                new { info.LoginProvider, Email = email,
-                    UserId = user.Id }, dbContext);
+                new { info.LoginProvider, UserId = user.Id }, dbContext);
 
             await dbContext.SaveChangesAsync();
         }
@@ -84,57 +81,68 @@ public class ExternalCallbackHandler(
 
             if (!logins.Any(l => l.LoginProvider == info.LoginProvider))
             {
-                await auditLogger.LogAsync("ExternalAuth", "Blocked_RequireManualLinking", new { info.LoginProvider, Email = email, UserId = user.Id }, dbContext);
+                await auditLogger.LogAsync(
+                    "ExternalAuth",
+                    "Blocked_RequireManualLinking",
+                    new { info.LoginProvider, UserId = user.Id },
+                    dbContext);
                 Uri? uri = string.IsNullOrEmpty(request.ReturnUrl) ? null : new Uri(request.ReturnUrl, UriKind.RelativeOrAbsolute);
                 var requireLinkingPath = frontendUrlProvider.GetValidRedirectUrl(uri, "login");
 
                 var param = new Dictionary<string, string?>
                 {
                     { "error", "require_account_linking" },
-                    { "email", email },
                     { "provider", info.LoginProvider }
                 };
 
-                var finalRedirectUriLinking = QueryHelpers.AddQueryString(requireLinkingPath.ToString(), param);
+                var finalRedirectUriLinking = Microsoft.AspNetCore.WebUtilities.QueryHelpers.AddQueryString(
+                    requireLinkingPath.ToString(),
+                    param);
                 await dbContext.SaveChangesAsync();
                 return new RedirectResult(finalRedirectUriLinking);
             }
 
         }
 
-        var roles = await userManager.GetRolesAsync(user);
-        var permissions = await permissionRepository.GetUserPermissionsAsync(user.Id);
-        var securityStamp = await userManager.GetSecurityStampAsync(user);
-        var resolvedEmail = user.Email ?? user.UserName ?? throw new InvalidOperationException("User email is missing.");
-        string accessToken = await jwtProvider.GenerateAccessToken(user.Id, resolvedEmail, roles, permissions, securityStamp);
-
+        var httpContext = httpContextAccessor.HttpContext
+                          ?? throw new InvalidOperationException("OAuth callback requires an HTTP context.");
+        var utcNow = DateTime.UtcNow;
         string rawRefreshToken = Convert.ToBase64String(RandomNumberGenerator.GetBytes(64));
-        var refreshTokenHash = TokenSecurityHelper.ComputeSha256Hash(rawRefreshToken);
-
-        var refreshTokenEntity = new RefreshToken
+        var session = new UserSession
         {
-            TokenHash = refreshTokenHash,
+            Id = Guid.NewGuid(),
             UserId = user.Id,
-            SessionId = Guid.NewGuid(),
-            FamilyId = Guid.NewGuid().ToString(),
-            ExpiresAtUtc = DateTime.UtcNow.AddDays(7),
-            CreatedAtUtc = DateTime.UtcNow,
+            DeviceName = DeviceNameResolver.Resolve(httpContext.Request.Headers.UserAgent.ToString()),
+            UserAgentHash = TokenSecurityHelper.ComputeSha256Hash(httpContext.Request.Headers.UserAgent.ToString()),
+            IpHash = TokenSecurityHelper.ComputeSha256Hash(httpContext.Connection.RemoteIpAddress?.ToString() ?? string.Empty),
+            CreatedAtUtc = utcNow,
+            LastSeenAtUtc = utcNow
         };
 
-        dbContext.RefreshTokens.Add(refreshTokenEntity);
+        session.RefreshTokens.Add(new RefreshToken
+        {
+            Id = Guid.NewGuid(),
+            TokenHash = TokenSecurityHelper.ComputeSha256Hash(rawRefreshToken),
+            UserId = user.Id,
+            FamilyId = Guid.NewGuid().ToString(),
+            ExpiresAtUtc = utcNow.AddDays(7),
+            CreatedAtUtc = utcNow
+        });
+        dbContext.UserSessions.Add(session);
         await dbContext.SaveChangesAsync();
+
+        httpContext.Response.Cookies.Append("refreshToken", rawRefreshToken, new CookieOptions
+        {
+            HttpOnly = true,
+            Secure = true,
+            SameSite = SameSiteMode.Strict,
+            Expires = utcNow.AddDays(7),
+            IsEssential = true
+        });
 
         Uri? returnUri = string.IsNullOrEmpty(request.ReturnUrl) ? null : new Uri(request.ReturnUrl, UriKind.RelativeOrAbsolute);
         var basePath = frontendUrlProvider.GetValidRedirectUrl(returnUri, "oauth-success");
 
-        var queryParams = new Dictionary<string, string?>
-        {
-            { "accessToken", accessToken },
-            { "refreshToken", rawRefreshToken }
-        };
-
-        var finalRedirectUri = QueryHelpers.AddQueryString(basePath.ToString(), queryParams);
-
-        return new RedirectResult(finalRedirectUri);
+        return new RedirectResult(basePath.ToString());
     }
 }

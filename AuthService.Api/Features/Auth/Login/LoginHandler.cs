@@ -1,10 +1,10 @@
-﻿using System.Security.Cryptography;
+using System.Security.Cryptography;
 using AuthService.Api.Features.Audit;
+using AuthService.Api.Infrastructure.Observability;
 using AuthService.Api.Infrastructure.Persistence;
 using AuthService.Api.Infrastructure.Persistence.Entities;
 using AuthService.Api.Infrastructure.Security;
 using AuthService.Api.Infrastructure.Tokens;
-using AuthService.Api.Infrastructure.Observability;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
@@ -171,7 +171,7 @@ public class LoginHandler(
 
     private async Task LogAuditAsync(ApplicationUser user, string eventType, string outcome)
     {
-        var auditEvent = new UserLoggedInAuditEvent { UserId = user.Id, Email = user.Email ?? string.Empty };
+        var auditEvent = new UserLoggedInAuditEvent { UserId = user.Id };
         await auditLogger.LogAsync(eventType, outcome, auditEvent, dbContext);
     }
 

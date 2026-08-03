@@ -1,10 +1,9 @@
-﻿using System.Security.Claims;
+using System.Security.Claims;
 using AuthService.Api.Features.Audit;
 using AuthService.Api.Features.Auth.ExternalCallback;
 using AuthService.Api.Infrastructure.Persistence;
 using AuthService.Api.Infrastructure.Persistence.Entities;
 using AuthService.Api.Infrastructure.Security;
-using AuthService.Api.Infrastructure.Tokens;
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
@@ -20,10 +19,9 @@ public class ExternalCallbackHandlerTests
     private readonly Mock<SignInManager<ApplicationUser>> _signInManagerMock;
     private readonly Mock<UserManager<ApplicationUser>> _userManagerMock;
     private readonly Mock<IFrontendUrlProvider> _urlProviderMock;
-    private readonly Mock<IJwtProvider> _jwtProviderMock;
+    private readonly Mock<IHttpContextAccessor> _httpContextAccessorMock;
     private readonly Mock<IAuditLogger> _auditLoggerMock;
     private readonly ExternalCallbackHandler _handler;
-    private readonly Mock<IPermissionRepository> _permissionRepositoryMock;
     private readonly AppDbContext _dbContext;
 
     public ExternalCallbackHandlerTests()
@@ -32,19 +30,18 @@ public class ExternalCallbackHandlerTests
         _userManagerMock = new Mock<UserManager<ApplicationUser>>(
             userStoreMock.Object, null!, null!, null!, null!, null!, null!, null!, null!);
 
-        var contextAccessorMock = new Mock<IHttpContextAccessor>();
+        _httpContextAccessorMock = new Mock<IHttpContextAccessor>();
+        _httpContextAccessorMock.SetupGet(accessor => accessor.HttpContext).Returns(new DefaultHttpContext());
         var userClaimsPrincipalFactoryMock = new Mock<IUserClaimsPrincipalFactory<ApplicationUser>>();
 
         _signInManagerMock = new Mock<SignInManager<ApplicationUser>>(
             _userManagerMock.Object,
-            contextAccessorMock.Object,
+            _httpContextAccessorMock.Object,
             userClaimsPrincipalFactoryMock.Object,
             null!, null!, null!, null!);
 
         _urlProviderMock = new Mock<IFrontendUrlProvider>();
-        _jwtProviderMock = new Mock<IJwtProvider>();
         _auditLoggerMock = new Mock<IAuditLogger>();
-        _permissionRepositoryMock = new Mock<IPermissionRepository>();
 
         var dbOptions = new DbContextOptionsBuilder<AppDbContext>()
             .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
@@ -57,8 +54,7 @@ public class ExternalCallbackHandlerTests
             _userManagerMock.Object,
             _auditLoggerMock.Object,
             _dbContext,
-            _jwtProviderMock.Object,
-            _permissionRepositoryMock.Object
+            _httpContextAccessorMock.Object
         );
     }
 
@@ -86,10 +82,52 @@ public class ExternalCallbackHandlerTests
         var request = new ExternalCallbackRequest("Google", null);
 
         // Act
-         var result = await _handler.HandleCallback(request);
+        var result = await _handler.HandleCallback(request);
 
         // Assert
-         var redirectResult = Assert.IsType<RedirectResult>(result);
-         Assert.Contains("email_not_verified", redirectResult.Url);
+        var redirectResult = Assert.IsType<RedirectResult>(result);
+        Assert.Contains("email_not_verified", redirectResult.Url);
+    }
+
+    [Fact]
+    public async Task HandleCallback_WhenLoginSucceeds_SetsRefreshCookieAndDoesNotPutTokensInRedirect()
+    {
+        var claims = new List<Claim>
+        {
+            new(ClaimTypes.Email, "test@example.com"),
+            new("email_verified", "true")
+        };
+        var identity = new ClaimsIdentity(claims, "TestAuth");
+        var loginInfo = new ExternalLoginInfo(new ClaimsPrincipal(identity), "Google", "123", "Google");
+        var user = new ApplicationUser { Id = Guid.NewGuid(), Email = "test@example.com", UserName = "test@example.com" };
+
+        _signInManagerMock
+            .Setup(manager => manager.GetExternalLoginInfoAsync(It.IsAny<string?>()))
+            .ReturnsAsync(loginInfo);
+        _userManagerMock.Setup(manager => manager.FindByEmailAsync("test@example.com")).ReturnsAsync(user);
+        _userManagerMock
+            .Setup(manager => manager.GetLoginsAsync(user))
+            .ReturnsAsync(new List<UserLoginInfo> { new("Google", "123", "Google") });
+        _urlProviderMock
+            .Setup(provider => provider.GetValidRedirectUrl(It.IsAny<Uri?>(), "oauth-success"))
+            .Returns(new Uri("https://yourapp.com/oauth-success"));
+        _auditLoggerMock
+            .Setup(logger => logger.LogAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<object>(), _dbContext))
+            .Returns(Task.CompletedTask);
+
+        var result = await _handler.HandleCallback(new ExternalCallbackRequest("Google", null));
+
+        var redirect = Assert.IsType<RedirectResult>(result);
+        Assert.Equal("https://yourapp.com/oauth-success", redirect.Url);
+        Assert.DoesNotContain("token", redirect.Url, StringComparison.OrdinalIgnoreCase);
+
+        var httpContext = _httpContextAccessorMock.Object.HttpContext!;
+        var cookie = Assert.Single(httpContext.Response.Headers.SetCookie);
+        Assert.StartsWith("refreshToken=", cookie, StringComparison.Ordinal);
+        Assert.Contains("httponly", cookie, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("secure", cookie, StringComparison.OrdinalIgnoreCase);
+        var session = Assert.Single(_dbContext.UserSessions);
+        var refreshToken = Assert.Single(_dbContext.RefreshTokens);
+        Assert.Equal(session.Id, refreshToken.SessionId);
     }
 }
