@@ -1,0 +1,18 @@
+# Example production override. Copy to compose.production.yaml outside source control.
+services:
+  auth-api:
+    image: ghcr.io/OWNER/authservice:COMMIT_SHA
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__DB_CONNECTION: ${DB_CONNECTION}
+      Redis__Configuration: ${REDIS_CONFIGURATION}
+      JwtSettings__PrivateKey: ${JWT_PRIVATE_KEY}
+      JwtSettings__PublicKey: ${JWT_PUBLIC_KEY}
+    ports: [] # expose through a reverse proxy / ingress, not directly
+    secrets: [] # replace environment variables with platform secret references when available
+
+  postgres:
+    ports: []
+  redis:
+    ports: []

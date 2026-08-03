@@ -1,0 +1,38 @@
+@baseUrl = http://localhost:5000
+@email = user@example.test
+@password = ReplaceWithLocalPassword123!
+
+### Health
+GET {{baseUrl}}/health/ready
+
+### Register
+POST {{baseUrl}}/api/v1/auth/register
+Content-Type: application/json
+
+{
+  "email": "{{email}}",
+  "password": "{{password}}"
+}
+
+### Login
+POST {{baseUrl}}/api/v1/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{email}}",
+  "password": "{{password}}"
+}
+
+### Refresh (HTTP client reuses the refresh cookie from login)
+POST {{baseUrl}}/api/v1/auth/refresh
+
+### Logout
+POST {{baseUrl}}/api/v1/auth/logout
+
+### Request password reset (generic response)
+POST {{baseUrl}}/api/v1/auth/forgot-password
+Content-Type: application/json
+
+{
+  "email": "{{email}}"
+}

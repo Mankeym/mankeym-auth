@@ -1,0 +1,102 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  quality-and-tests:
+    name: Quality, build and tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 9.0.x
+          cache: true
+      - name: Restore
+        run: dotnet restore AuthService.sln
+      - name: Verify formatting
+        run: dotnet format AuthService.sln --verify-no-changes --no-restore
+      - name: Build
+        run: dotnet build AuthService.sln --configuration Release --no-restore
+      - name: Unit tests with coverage
+        run: dotnet test AuthService.UnitTests/AuthService.UnitTests.csproj --configuration Release --no-build --collect:"XPlat Code Coverage" --logger "trx;LogFileName=unit.trx" --results-directory TestResults/unit
+      - name: Integration tests with Testcontainers
+        run: dotnet test AuthService.IntegrationTests/AuthService.IntegrationTests.csproj --configuration Release --no-build --collect:"XPlat Code Coverage" --logger "trx;LogFileName=integration.trx" --results-directory TestResults/integration
+      - name: Upload test results and coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-and-coverage
+          path: TestResults
+          if-no-files-found: warn
+
+  dependency-review:
+    name: Dependency review
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/dependency-review-action@v4
+
+  secret-scan:
+    name: Secret scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  container:
+    name: Container build and scan
+    runs-on: ubuntu-latest
+    needs: quality-and-tests
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Build image with immutable SHA tag
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          load: true
+          tags: authservice:${{ github.sha }}
+      - name: Scan image for vulnerabilities
+        uses: aquasecurity/trivy-action@0.29.0
+        with:
+          image-ref: authservice:${{ github.sha }}
+          format: table
+          exit-code: '1'
+          ignore-unfixed: true
+          severity: HIGH,CRITICAL
+
+  migration-validation:
+    name: Migration validation and release image
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    needs: quality-and-tests
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 9.0.x
+          cache: true
+      - run: dotnet restore AuthService.sln
+      - name: Install EF CLI
+        run: dotnet tool install --global dotnet-ef --version 9.*
+      - name: Validate EF model has no pending migration
+        run: dotnet ef migrations has-pending-model-changes --project AuthService.Api/AuthService.Api.csproj --startup-project AuthService.Api/AuthService.Api.csproj
+      - name: Build release image with SHA tag
+        run: docker build --tag authservice:${{ github.sha }} .

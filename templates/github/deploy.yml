@@ -1,0 +1,35 @@
+# Copy to .github/workflows/deploy.yml only after choosing a deployment target.
+name: Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Target GitHub Environment
+        required: true
+        type: choice
+        options: [staging, production]
+      image_ref:
+        description: Immutable image tag (commit SHA)
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate immutable image reference
+        run: |
+          test "${{ inputs.image_ref }}" != "latest"
+          test -n "${{ inputs.image_ref }}"
+      # Choose one target-specific action below. Do not put private values in this file.
+      # - SSH/VPS: use appleboy/ssh-action and secrets.DEPLOY_HOST / DEPLOY_USER / DEPLOY_SSH_KEY.
+      # - Kubernetes: authenticate with an environment-scoped kubeconfig secret and run kubectl set image.
+      # - Managed platform: call its official deploy action with environment-scoped credentials.
+      - name: Deployment placeholder
+        run: echo "Configure the target-specific deployment command before enabling this workflow."
