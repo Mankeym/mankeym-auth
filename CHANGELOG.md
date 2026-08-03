@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.1](https://github.com/Mankeym/mankeym-auth/compare/v0.3.0...v0.3.1) (2026-08-03)
+
+
+### 🐛 Bug fixes
+
+* **ci:** target repository for release auto-merge ([400f6df](https://github.com/Mankeym/mankeym-auth/commit/400f6df45e5e9fdebd86c36daacb77425a9d2fa3))
+
 ## [0.3.0](https://github.com/Mankeym/mankeym-auth/compare/v0.2.0...v0.3.0) (2026-08-03)
 
 
