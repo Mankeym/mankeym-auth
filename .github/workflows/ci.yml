@@ -27,6 +27,23 @@ jobs:
         run: dotnet build AuthService.sln --configuration Release --no-restore
       - name: Unit tests with coverage
         run: dotnet test AuthService.UnitTests/AuthService.UnitTests.csproj --configuration Release --no-build --collect:"XPlat Code Coverage" --logger "trx;LogFileName=unit.trx" --results-directory TestResults/unit
+      - name: Enforce unit coverage baseline
+        run: |
+          python3 - <<'PY'
+          import pathlib
+          import sys
+          import xml.etree.ElementTree as element_tree
+
+          threshold = 0.10
+          reports = list(pathlib.Path("TestResults/unit").rglob("coverage.cobertura.xml"))
+          if len(reports) != 1:
+              sys.exit(f"Expected one unit coverage report, found {len(reports)}.")
+
+          line_rate = float(element_tree.parse(reports[0]).getroot().attrib["line-rate"])
+          print(f"Unit line coverage: {line_rate:.2%}; required: {threshold:.2%}")
+          if line_rate < threshold:
+              sys.exit("Unit line coverage is below the required baseline.")
+          PY
       - name: Integration tests with Testcontainers
         run: dotnet test AuthService.IntegrationTests/AuthService.IntegrationTests.csproj --configuration Release --no-build --collect:"XPlat Code Coverage" --logger "trx;LogFileName=integration.trx" --results-directory TestResults/integration
       - name: Upload test results and coverage
