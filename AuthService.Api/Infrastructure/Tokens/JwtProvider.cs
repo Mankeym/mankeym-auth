@@ -13,19 +13,20 @@ using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using System.Threading.Tasks;
 
-public class JwtProvider : IJwtProvider
+public sealed class JwtProvider : IJwtProvider, IDisposable
 {
     private readonly JwtOptions _options;
+    private readonly RSA _rsa;
     private readonly RsaSecurityKey _key;
 
     public JwtProvider(IOptions<JwtOptions> options)
     {
         _options = options.Value;
 
-        var rsa = RSA.Create();
-        rsa.ImportFromPem(_options.PrivateKey);
+        _rsa = RSA.Create();
+        _rsa.ImportFromPem(_options.PrivateKey);
 
-        _key = new RsaSecurityKey(rsa);
+        _key = new RsaSecurityKey(_rsa);
     }
 
     public Task<string> GenerateAccessToken(
@@ -64,4 +65,6 @@ public class JwtProvider : IJwtProvider
 
         return Task.FromResult(tokenValue);
     }
+
+    public void Dispose() => _rsa.Dispose();
 }
